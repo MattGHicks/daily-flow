@@ -75,9 +75,8 @@ export default function MessagesPage() {
     fetchMessages(true);
   };
 
-  const unreadCount = messageThreads.filter((t) => t.unread).length;
   const needsResponseCount = messageThreads.filter(
-    (t) => t.unread && t.priority === 'high'
+    (t) => t.needsResponse === true
   ).length;
 
   return (
@@ -101,22 +100,8 @@ export default function MessagesPage() {
         ) : (
           <>
             {/* Stats */}
-            <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-1 max-w-xs">
           <AnimatedContainer animation="slideUp">
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Unread Messages</p>
-                    <p className="text-2xl font-bold mt-1">{unreadCount}</p>
-                  </div>
-                  <MessageSquare className="h-8 w-8 text-primary" />
-                </div>
-              </CardContent>
-            </Card>
-          </AnimatedContainer>
-
-          <AnimatedContainer animation="slideUp" delay={0.1}>
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
@@ -124,21 +109,7 @@ export default function MessagesPage() {
                     <p className="text-xs text-muted-foreground">Needs Response</p>
                     <p className="text-2xl font-bold mt-1">{needsResponseCount}</p>
                   </div>
-                  <AlertCircle className="h-8 w-8 text-destructive" />
-                </div>
-              </CardContent>
-            </Card>
-          </AnimatedContainer>
-
-          <AnimatedContainer animation="slideUp" delay={0.2}>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Avg Response Time</p>
-                    <p className="text-2xl font-bold mt-1">4.2h</p>
-                  </div>
-                  <Clock className="h-8 w-8 text-green-500" />
+                  <AlertCircle className="h-8 w-8 text-orange-500" />
                 </div>
               </CardContent>
             </Card>
@@ -146,55 +117,64 @@ export default function MessagesPage() {
         </div>
 
         {/* Message Threads */}
-        <AnimatedContainer animation="slideUp" delay={0.3}>
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Active Messages</CardTitle>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleRefresh}
-                  disabled={isRefreshing}
-                >
-                  {isRefreshing ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Refreshing...
-                    </>
-                  ) : (
-                    <>
-                      <RefreshCw className="h-4 w-4 mr-2" />
-                      Refresh
-                    </>
-                  )}
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {messageThreads.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  No message threads found
-                </div>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-semibold">Active Messages</h2>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+            >
+              {isRefreshing ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Refreshing...
+                </>
               ) : (
-                <div className="space-y-3">
-                  {messageThreads.map((thread, index) => {
-                    const threadContent = (
-                      <motion.div
-                        key={thread.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        className="p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer"
-                        whileHover={{ x: 4 }}
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh
+                </>
+              )}
+            </Button>
+          </div>
+
+          {messageThreads.length === 0 ? (
+            <AnimatedContainer animation="slideUp" delay={0.1}>
+              <Card>
+                <CardContent className="p-12">
+                  <div className="text-center text-muted-foreground">
+                    No message threads found
+                  </div>
+                </CardContent>
+              </Card>
+            </AnimatedContainer>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {messageThreads.map((thread, index) => {
+                const cardContent = (
+                  <AnimatedContainer animation="slideUp" delay={index * 0.05} key={thread.id}>
+                    <motion.div whileHover={{ y: -4 }} transition={{ duration: 0.2 }}>
+                      <Card
+                        className={`h-full cursor-pointer transition-all ${
+                          thread.needsResponse
+                            ? 'bg-orange-500/10 hover:bg-orange-500/15 border-orange-500/30 hover:border-orange-500/50'
+                            : 'hover:bg-muted/50'
+                        }`}
                       >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <h4 className="font-medium text-sm">{thread.client}</h4>
-                              {thread.unread && (
-                                <span className="h-2 w-2 rounded-full bg-primary" />
-                              )}
+                        <CardContent className="p-5">
+                          {/* Header */}
+                          <div className="flex items-start justify-between gap-2 mb-3">
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-semibold text-base mb-1 truncate">
+                                {thread.client}
+                              </h3>
+                              <p className="text-xs text-muted-foreground line-clamp-1">
+                                {thread.subject}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-1 flex-shrink-0">
                               {thread.priority === 'high' && (
                                 <AlertCircle className="h-4 w-4 text-destructive" />
                               )}
@@ -202,49 +182,72 @@ export default function MessagesPage() {
                                 <ExternalLink className="h-3 w-3 text-muted-foreground" />
                               )}
                             </div>
-                            <p className="text-xs text-muted-foreground mb-2">
-                              {thread.subject}
-                            </p>
-                            <p className="text-sm text-foreground/80 line-clamp-1">
+                          </div>
+
+                          {/* Status Badge */}
+                          {thread.needsResponse && (
+                            <div className="mb-3">
+                              <span className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-orange-500/20 text-orange-600 dark:text-orange-400 border border-orange-500/30 font-medium">
+                                <AlertCircle className="h-3 w-3" />
+                                Needs Response
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Last Message */}
+                          <div className="mb-3 min-h-[60px]">
+                            <div className="flex items-start gap-2 mb-1">
+                              <span className={`text-xs font-semibold ${
+                                thread.lastMessageSentByMe
+                                  ? 'text-primary'
+                                  : 'text-orange-600 dark:text-orange-400'
+                              }`}>
+                                {thread.lastMessageSentByMe ? 'You' : thread.lastMessageAuthor}:
+                              </span>
+                            </div>
+                            <p className="text-sm text-foreground/80 line-clamp-2">
                               {thread.lastMessage}
                             </p>
-                            <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                              <span className="flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                {thread.timestamp}
-                              </span>
-                              {thread.redmineStatus && (
-                                <span className="flex items-center gap-1">
-                                  {thread.redmineStatus}
-                                </span>
-                              )}
-                            </div>
                           </div>
-                        </div>
-                      </motion.div>
-                    );
 
-                    // If thread has Redmine URL, make it a link
-                    if (thread.redmineUrl) {
-                      return (
-                        <a
-                          key={thread.id}
-                          href={thread.redmineUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          {threadContent}
-                        </a>
-                      );
-                    }
+                          {/* Footer */}
+                          <div className="flex items-center justify-between text-xs text-muted-foreground pt-3 border-t">
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {thread.timestamp}
+                            </span>
+                            {thread.redmineStatus && (
+                              <span className="truncate ml-2">
+                                {thread.redmineStatus}
+                              </span>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  </AnimatedContainer>
+                );
 
-                    return threadContent;
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </AnimatedContainer>
+                // If thread has Redmine URL, make it a link
+                if (thread.redmineUrl) {
+                  return (
+                    <a
+                      key={thread.id}
+                      href={thread.redmineUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block"
+                    >
+                      {cardContent}
+                    </a>
+                  );
+                }
+
+                return cardContent;
+              })}
+            </div>
+          )}
+        </div>
 
         {/* Integration Info */}
         <AnimatedContainer animation="slideUp" delay={0.4}>

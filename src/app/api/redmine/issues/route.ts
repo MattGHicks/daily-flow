@@ -3,9 +3,12 @@ import { prisma } from '@/lib/prisma';
 import { decrypt } from '@/lib/encryption';
 import {
   fetchRedmineIssues,
+  getCurrentRedmineUser,
   mapRedminePriority,
   formatRelativeTime,
   getLastMessage,
+  getLastMessageAuthor,
+  wasLastMessageByUser,
   isIssueUnread,
   type RedmineIssueDetailed,
 } from '@/lib/api/redmine';
@@ -64,44 +67,77 @@ export async function GET() {
       );
     }
 
-    // Fetch issues from Redmine
-    // We'll fetch recent issues assigned to the current user or created by them
+    // Get current user info to check who sent messages
+    const currentUser = await getCurrentRedmineUser(settings.redmineUrl, apiKey);
+    if (!currentUser) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Failed to get current user from Redmine',
+        },
+        { status: 500 }
+      );
+    }
+
+    // Fetch issues from Redmine (list endpoint - doesn't include journals)
     const { issues, totalCount } = await fetchRedmineIssues(
       settings.redmineUrl,
       apiKey,
       {
         assignedToId: 'me', // Fetch issues assigned to the authenticated user
         statusId: 'open', // Only fetch open issues
-        limit: 50, // Limit to recent 50 issues
+        limit: 25, // Limit to recent 25 issues (we'll fetch details for these)
         sort: 'updated_on:desc', // Most recently updated first
-        include: 'journals', // Include comments/journals
       }
     );
 
-    // Transform Redmine issues into MessageThread format
-    const messageThreads: MessageThread[] = issues.map((issue) => {
-      const detailedIssue = issue as RedmineIssueDetailed;
+    // Fetch full details (with journals) for each issue
+    // Note: This makes individual API calls but is necessary to get journal data
+    const { fetchRedmineIssue } = await import('@/lib/api/redmine');
 
-      return {
-        id: issue.id.toString(),
-        client: issue.project.name,
-        subject: issue.subject,
-        lastMessage: getLastMessage(detailedIssue),
-        timestamp: formatRelativeTime(issue.updated_on),
-        unread: isIssueUnread(issue),
-        priority: mapRedminePriority(issue.priority.name),
-        // Additional Redmine-specific data
-        redmineIssueId: issue.id,
-        redmineProjectId: issue.project.id,
-        redmineStatus: issue.status.name,
-        redmineTracker: issue.tracker.name,
-        redmineUrl: `${settings.redmineUrl}/issues/${issue.id}`,
-        assignedTo: issue.assigned_to?.name,
-        author: issue.author.name,
-        createdOn: issue.created_on,
-        updatedOn: issue.updated_on,
-      };
-    });
+    const detailedIssuesPromises = issues.map((issue) =>
+      fetchRedmineIssue(settings.redmineUrl, apiKey, issue.id)
+    );
+
+    const detailedIssues = await Promise.all(detailedIssuesPromises);
+
+    // Transform Redmine issues into MessageThread format
+    const messageThreads: MessageThread[] = detailedIssues
+      .filter((issue): issue is NonNullable<typeof issue> => issue !== null)
+      .map((detailedIssue) => {
+        const lastMessageAuthor = getLastMessageAuthor(detailedIssue);
+        const lastMessageSentByMe = wasLastMessageByUser(detailedIssue, currentUser.id);
+
+        // Issue needs response if:
+        // 1. It's open/unread
+        // 2. Last message was NOT sent by me
+        // 3. It's assigned to me or I'm involved
+        const needsResponse = isIssueUnread(detailedIssue) && !lastMessageSentByMe;
+
+        return {
+          id: detailedIssue.id.toString(),
+          client: detailedIssue.project.name,
+          subject: detailedIssue.subject,
+          lastMessage: getLastMessage(detailedIssue),
+          timestamp: formatRelativeTime(detailedIssue.updated_on),
+          unread: isIssueUnread(detailedIssue),
+          priority: mapRedminePriority(detailedIssue.priority.name),
+          // Message tracking
+          lastMessageSentByMe,
+          lastMessageAuthor: lastMessageAuthor?.name || 'Unknown',
+          needsResponse,
+          // Additional Redmine-specific data
+          redmineIssueId: detailedIssue.id,
+          redmineProjectId: detailedIssue.project.id,
+          redmineStatus: detailedIssue.status.name,
+          redmineTracker: detailedIssue.tracker.name,
+          redmineUrl: `${settings.redmineUrl}/issues/${detailedIssue.id}`,
+          assignedTo: detailedIssue.assigned_to?.name,
+          author: detailedIssue.author.name,
+          createdOn: detailedIssue.created_on,
+          updatedOn: detailedIssue.updated_on,
+        };
+      });
 
     // Update cache
     cachedData = messageThreads;

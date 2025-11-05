@@ -17,4 +17,8 @@ export interface MessageThread {
   author?: string;
   createdOn?: string;
   updatedOn?: string;
+  // Message tracking
+  lastMessageSentByMe?: boolean;
+  lastMessageAuthor?: string;
+  needsResponse?: boolean;
 }

@@ -185,6 +185,27 @@ export async function fetchRedmineIssue(
 }
 
 /**
+ * Fetch current user information from Redmine
+ */
+export async function getCurrentRedmineUser(
+  baseUrl: string,
+  apiKey: string
+): Promise<RedmineUser | null> {
+  try {
+    const response = await executeRedmineRequest<{ user: RedmineUser }>(
+      baseUrl,
+      '/users/current.json',
+      apiKey
+    );
+
+    return response.user || null;
+  } catch (error) {
+    console.error('Error fetching current Redmine user:', error);
+    return null;
+  }
+}
+
+/**
  * Fetch all projects from Redmine
  */
 export async function fetchRedmineProjects(
@@ -248,21 +269,66 @@ export function formatRelativeTime(timestamp: string): string {
 
 /**
  * Get the last message from an issue (last journal note or description)
+ * Prioritizes journal entries (comments) over the initial description
  */
 export function getLastMessage(issue: RedmineIssueDetailed): string {
-  if (issue.journals && issue.journals.length > 0) {
-    // Find last journal with notes
-    const lastJournalWithNotes = [...issue.journals]
-      .reverse()
-      .find((journal) => journal.notes && journal.notes.trim().length > 0);
+  // Check if journals exist and have any entries
+  if (issue.journals && Array.isArray(issue.journals) && issue.journals.length > 0) {
+    // Sort journals by ID (newer journals have higher IDs) and get the last one with notes
+    const sortedJournals = [...issue.journals].sort((a, b) => b.id - a.id);
 
-    if (lastJournalWithNotes) {
-      return lastJournalWithNotes.notes;
+    for (const journal of sortedJournals) {
+      if (journal.notes && typeof journal.notes === 'string' && journal.notes.trim().length > 0) {
+        // Clean up the message - remove excessive whitespace
+        return journal.notes.trim();
+      }
     }
   }
 
-  // Fallback to description
-  return issue.description || 'No message';
+  // Only fall back to description if there are truly no journal entries
+  // This should rarely happen for active issues
+  if (issue.description && issue.description.trim().length > 0) {
+    return issue.description.trim();
+  }
+
+  return 'No messages yet';
+}
+
+/**
+ * Get the author of the last message in an issue
+ */
+export function getLastMessageAuthor(issue: RedmineIssueDetailed): {
+  name: string;
+  id: number;
+} | null {
+  // Check if journals exist and have any entries
+  if (issue.journals && Array.isArray(issue.journals) && issue.journals.length > 0) {
+    // Sort journals by ID (newer journals have higher IDs) and get the last one with notes
+    const sortedJournals = [...issue.journals].sort((a, b) => b.id - a.id);
+
+    for (const journal of sortedJournals) {
+      if (journal.notes && typeof journal.notes === 'string' && journal.notes.trim().length > 0) {
+        return {
+          name: journal.user.name,
+          id: journal.user.id,
+        };
+      }
+    }
+  }
+
+  // Fallback to issue author (original creator) if no journals with notes
+  return {
+    name: issue.author.name,
+    id: issue.author.id,
+  };
+}
+
+/**
+ * Check if the last message was sent by a specific user
+ */
+export function wasLastMessageByUser(issue: RedmineIssueDetailed, userId: number): boolean {
+  const lastAuthor = getLastMessageAuthor(issue);
+  return lastAuthor ? lastAuthor.id === userId : false;
 }
 
 /**
