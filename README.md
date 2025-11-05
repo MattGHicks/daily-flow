@@ -307,6 +307,8 @@ model UserSettings {
 - `npx prisma generate` - Generate Prisma client
 - `npx prisma db push` - Push schema changes to database
 
+**📖 For detailed server management (start, stop, restart, troubleshooting), see [SERVER_MANAGEMENT.md](./SERVER_MANAGEMENT.md)**
+
 ---
 
 ## 🎯 Current Development Focus
