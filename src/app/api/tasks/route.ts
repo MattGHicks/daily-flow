@@ -18,9 +18,15 @@ export async function GET() {
       ],
     });
 
+    // Parse tags from JSON strings
+    const tasksWithParsedTags = tasks.map((task) => ({
+      ...task,
+      tags: task.tags ? JSON.parse(task.tags) : [],
+    }));
+
     return NextResponse.json({
       success: true,
-      data: tasks,
+      data: tasksWithParsedTags,
     });
   } catch (error) {
     console.error('Error fetching tasks:', error);
@@ -75,16 +81,22 @@ export async function POST(request: Request) {
         order,
         assignee,
         dueDate: dueDate ? new Date(dueDate) : null,
-        tags: tags || [],
+        tags: tags && tags.length > 0 ? JSON.stringify(tags) : null,
         project,
         linkedProjectId,
         linkedMessageThreadId,
       },
     });
 
+    // Parse tags for response
+    const taskWithParsedTags = {
+      ...task,
+      tags: task.tags ? JSON.parse(task.tags) : [],
+    };
+
     return NextResponse.json({
       success: true,
-      data: task,
+      data: taskWithParsedTags,
     });
   } catch (error) {
     console.error('Error creating task:', error);
@@ -126,6 +138,11 @@ export async function PATCH(request: Request) {
         data.dueDate = new Date(data.dueDate);
       }
 
+      // Convert tags to JSON string if it exists
+      if (data.tags) {
+        data.tags = JSON.stringify(data.tags);
+      }
+
       return prisma.task.update({
         where: {
           id,
@@ -137,9 +154,15 @@ export async function PATCH(request: Request) {
 
     const updatedTasks = await prisma.$transaction(updatePromises);
 
+    // Parse tags for response
+    const tasksWithParsedTags = updatedTasks.map((task) => ({
+      ...task,
+      tags: task.tags ? JSON.parse(task.tags) : [],
+    }));
+
     return NextResponse.json({
       success: true,
-      data: updatedTasks,
+      data: tasksWithParsedTags,
     });
   } catch (error) {
     console.error('Error updating tasks:', error);

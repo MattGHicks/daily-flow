@@ -9,19 +9,20 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  password  String?  // For future auth implementation
-  settings  UserSettings?
-  tasks     Task[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String       @id @default(cuid())
+  email      String       @unique
+  name       String?
+  password   String?      // For future auth implementation
+  settings   UserSettings?
+  tasks      Task[]
+  taskStages TaskStage[]
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
 }
 
 model UserSettings {
@@ -51,11 +52,11 @@ model Task {
   title                 String
   description           String?
   priority              String    // low, medium, high
-  status                String    // backlog, todo, in-progress, review, done
+  status                String    // references TaskStage.id
   order                 Int       @default(0) // Position within the column
   assignee              String?
   dueDate               DateTime?
-  tags                  String[]
+  tags                  String?   // JSON string for SQLite compatibility
   project               String?
   linkedProjectId       String?   // Link to Monday.com project
   linkedMessageThreadId String?   // Link to Redmine thread
@@ -67,4 +68,19 @@ model Task {
   @@index([userId])
   @@index([status])
   @@index([priority])
+}
+
+model TaskStage {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  order     Int      @default(0) // Position of the column
+  color     String?  // Optional color for the column
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([order])
 }

@@ -20,22 +20,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Task } from '@/types/kanban';
+import { Task, Column } from '@/types/kanban';
 
 interface CreateTaskModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreateTask: (task: Omit<Task, 'id'>) => void;
+  stages: Column[];
 }
 
 export function CreateTaskModal({
   open,
   onOpenChange,
   onCreateTask,
+  stages,
 }: CreateTaskModalProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium');
+  const [status, setStatus] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [tags, setTags] = useState('');
 
@@ -44,10 +47,14 @@ export function CreateTaskModal({
 
     if (!title.trim()) return;
 
+    // Use selected status or first stage as default
+    const taskStatus = status || stages[0]?.id || 'backlog';
+
     const newTask: Omit<Task, 'id'> = {
       title: title.trim(),
       description: description.trim() || undefined,
       priority,
+      status: taskStatus,
       assignee: 'Matt',
       dueDate: dueDate || undefined,
       tags: tags
@@ -63,6 +70,7 @@ export function CreateTaskModal({
     setTitle('');
     setDescription('');
     setPriority('medium');
+    setStatus('');
     setDueDate('');
     setTags('');
     onOpenChange(false);
@@ -75,7 +83,7 @@ export function CreateTaskModal({
           <DialogHeader>
             <DialogTitle>Create New Task</DialogTitle>
             <DialogDescription>
-              Add a new task to your backlog. You can move it to other columns later.
+              Add a new task. You can choose which stage to add it to.
             </DialogDescription>
           </DialogHeader>
 
@@ -107,6 +115,25 @@ export function CreateTaskModal({
 
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
+                <Label htmlFor="stage">Stage</Label>
+                <Select
+                  value={status}
+                  onValueChange={setStatus}
+                >
+                  <SelectTrigger id="stage">
+                    <SelectValue placeholder={stages[0]?.title || "Select stage"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {stages.map((stage) => (
+                      <SelectItem key={stage.id} value={stage.id}>
+                        {stage.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid gap-2">
                 <Label htmlFor="priority">Priority</Label>
                 <Select value={priority} onValueChange={(value: any) => setPriority(value)}>
                   <SelectTrigger id="priority">
@@ -119,16 +146,16 @@ export function CreateTaskModal({
                   </SelectContent>
                 </Select>
               </div>
+            </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="dueDate">Due Date</Label>
-                <Input
-                  id="dueDate"
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                />
-              </div>
+            <div className="grid gap-2">
+              <Label htmlFor="dueDate">Due Date</Label>
+              <Input
+                id="dueDate"
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+              />
             </div>
 
             <div className="grid gap-2">

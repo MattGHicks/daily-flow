@@ -7,137 +7,16 @@ import { Column, Task } from '@/types/kanban';
 import { AnimatedContainer } from '@/components/shared/animated-container';
 import { LinkSelectorModal } from '@/components/features/tasks/link-selector-modal';
 import { CreateTaskModal } from '@/components/features/tasks/create-task-modal';
+import { StageManagementModal } from '@/components/features/tasks/stage-management-modal';
 import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
-
-// Sample task data - can be linked to Monday.com projects and Redmine threads
-const initialColumns: Column[] = [
-  {
-    id: 'backlog',
-    title: 'Backlog',
-    tasks: [
-      {
-        id: '1',
-        title: 'Implement Monday.com API integration',
-        description: 'Connect to Monday.com API to sync project data automatically',
-        priority: 'high',
-        assignee: 'Matt',
-        dueDate: '2025-11-10',
-        tags: ['API', 'Integration'],
-        project: 'Daily Flow',
-      },
-      {
-        id: '2',
-        title: 'Design user settings page',
-        description: 'Create settings page with theme customization and preferences',
-        priority: 'medium',
-        assignee: 'Matt',
-        tags: ['UI', 'Design'],
-        project: 'Daily Flow',
-      },
-    ],
-  },
-  {
-    id: 'todo',
-    title: 'To Do',
-    tasks: [
-      {
-        id: '3',
-        title: 'Set up Google Calendar sync',
-        description: 'Integrate Google Calendar API for bi-directional event sync',
-        priority: 'high',
-        assignee: 'Matt',
-        dueDate: '2025-11-08',
-        tags: ['API', 'Calendar'],
-        project: 'Daily Flow',
-        linkedProjectId: 'p1', // Linked to Acme Website Redesign
-      },
-      {
-        id: '4',
-        title: 'Implement Redmine integration',
-        description: 'Connect to Redmine API to fetch client message threads',
-        priority: 'high',
-        assignee: 'Matt',
-        dueDate: '2025-11-09',
-        tags: ['API', 'Messages'],
-        project: 'Daily Flow',
-        linkedThreadId: 't1', // Linked to Acme Inc. thread
-      },
-    ],
-  },
-  {
-    id: 'in-progress',
-    title: 'In Progress',
-    tasks: [
-      {
-        id: '5',
-        title: 'Build Kanban board component',
-        description: 'Create drag-and-drop Kanban board with dnd-kit',
-        priority: 'high',
-        assignee: 'Matt',
-        dueDate: '2025-11-06',
-        tags: ['UI', 'Component'],
-        project: 'Daily Flow',
-        linkedProjectId: 'p2', // Linked to TechStart Mobile App
-        linkedThreadId: 't2', // Linked to TechStart thread
-      },
-      {
-        id: '6',
-        title: 'Add Spotify player widget',
-        description: 'Integrate Spotify Web API for music playback control',
-        priority: 'medium',
-        assignee: 'Matt',
-        tags: ['API', 'Music'],
-        project: 'Daily Flow',
-      },
-    ],
-  },
-  {
-    id: 'review',
-    title: 'Review',
-    tasks: [
-      {
-        id: '7',
-        title: 'Dashboard layout and navigation',
-        description: 'Responsive dashboard with sidebar and animated components',
-        priority: 'low',
-        assignee: 'Matt',
-        tags: ['UI', 'Complete'],
-        project: 'Daily Flow',
-      },
-    ],
-  },
-  {
-    id: 'done',
-    title: 'Done',
-    tasks: [
-      {
-        id: '8',
-        title: 'Initial Next.js setup',
-        description: 'Configure Next.js 15 with TypeScript and Tailwind CSS',
-        priority: 'high',
-        assignee: 'Matt',
-        tags: ['Setup', 'Complete'],
-        project: 'Daily Flow',
-      },
-      {
-        id: '9',
-        title: 'Install shadcn/ui components',
-        description: 'Set up component library and design system',
-        priority: 'medium',
-        assignee: 'Matt',
-        tags: ['Setup', 'Complete'],
-        project: 'Daily Flow',
-      },
-    ],
-  },
-];
+import { PlusCircle, Settings2 } from 'lucide-react';
 
 export default function TasksPage() {
   const searchParams = useSearchParams();
-  const [columns, setColumns] = useState<Column[]>(initialColumns);
+  const [columns, setColumns] = useState<Column[]>([]);
   const [linkModalOpen, setLinkModalOpen] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [stageModalOpen, setStageModalOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -146,44 +25,52 @@ export default function TasksPage() {
     .flatMap((col) => col.tasks)
     .find((task) => task.id === selectedTaskId);
 
-  // Fetch tasks from database on mount
+  // Fetch stages and tasks from database on mount
   useEffect(() => {
-    const fetchTasks = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch('/api/tasks');
-        const result = await response.json();
+        // Fetch stages and tasks in parallel
+        const [stagesResponse, tasksResponse] = await Promise.all([
+          fetch('/api/stages'),
+          fetch('/api/tasks'),
+        ]);
 
-        if (result.success) {
+        const stagesResult = await stagesResponse.json();
+        const tasksResult = await tasksResponse.json();
+
+        if (stagesResult.success && tasksResult.success) {
           // Convert flat task list to column structure
-          const tasksByStatus: Record<string, Task[]> = {
-            backlog: [],
-            todo: [],
-            'in-progress': [],
-            review: [],
-            done: [],
-          };
+          const tasksByStatus: Record<string, Task[]> = {};
 
-          result.data.forEach((task: any) => {
+          // Initialize task arrays for each stage
+          stagesResult.data.forEach((stage: any) => {
+            tasksByStatus[stage.id] = [];
+          });
+
+          // Group tasks by status
+          tasksResult.data.forEach((task: any) => {
             if (tasksByStatus[task.status]) {
               tasksByStatus[task.status].push(task);
             }
           });
 
-          const loadedColumns = initialColumns.map((col) => ({
-            ...col,
-            tasks: tasksByStatus[col.id] || [],
+          // Create columns from stages
+          const loadedColumns: Column[] = stagesResult.data.map((stage: any) => ({
+            id: stage.id,
+            title: stage.title,
+            tasks: tasksByStatus[stage.id] || [],
           }));
 
           setColumns(loadedColumns);
         }
       } catch (error) {
-        console.error('Error fetching tasks:', error);
+        console.error('Error fetching data:', error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchTasks();
+    fetchData();
   }, []);
 
   // Save tasks to database whenever columns change (debounced)
@@ -321,6 +208,91 @@ export default function TasksPage() {
     }
   };
 
+  const handleAddStage = async (title: string) => {
+    try {
+      const response = await fetch('/api/stages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        const newStage = result.data;
+        setColumns((cols) => [
+          ...cols,
+          {
+            id: newStage.id,
+            title: newStage.title,
+            tasks: [],
+          },
+        ]);
+      }
+    } catch (error) {
+      console.error('Error adding stage:', error);
+    }
+  };
+
+  const handleRenameStage = async (stageId: string, newTitle: string) => {
+    try {
+      const response = await fetch('/api/stages', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          updates: [{ id: stageId, title: newTitle }],
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setColumns((cols) =>
+          cols.map((col) =>
+            col.id === stageId ? { ...col, title: newTitle } : col
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Error renaming stage:', error);
+    }
+  };
+
+  const handleDeleteStage = async (stageId: string) => {
+    try {
+      // Find the first stage (to move tasks to)
+      const firstStageId = columns[0]?.id;
+      if (!firstStageId) return;
+
+      const response = await fetch(
+        `/api/stages?id=${stageId}&moveTasksTo=${firstStageId}`,
+        {
+          method: 'DELETE',
+        }
+      );
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Move tasks from deleted stage to first stage
+        setColumns((cols) => {
+          const stageToDelete = cols.find((col) => col.id === stageId);
+          if (!stageToDelete) return cols.filter((col) => col.id !== stageId);
+
+          return cols
+            .filter((col) => col.id !== stageId)
+            .map((col) =>
+              col.id === firstStageId
+                ? { ...col, tasks: [...col.tasks, ...stageToDelete.tasks] }
+                : col
+            );
+        });
+      }
+    } catch (error) {
+      console.error('Error deleting stage:', error);
+    }
+  };
+
   return (
     <>
       <div className="p-6">
@@ -340,6 +312,10 @@ export default function TasksPage() {
                 <span className="text-sm text-muted-foreground">
                   {columns.reduce((acc, col) => acc + col.tasks.length, 0)} total tasks
                 </span>
+                <Button variant="outline" onClick={() => setStageModalOpen(true)}>
+                  <Settings2 className="h-4 w-4 mr-2" />
+                  Manage Stages
+                </Button>
                 <Button onClick={() => setCreateModalOpen(true)}>
                   <PlusCircle className="h-4 w-4 mr-2" />
                   Create Task
@@ -377,6 +353,16 @@ export default function TasksPage() {
         open={createModalOpen}
         onOpenChange={setCreateModalOpen}
         onCreateTask={handleCreateTask}
+        stages={columns}
+      />
+
+      <StageManagementModal
+        open={stageModalOpen}
+        onOpenChange={setStageModalOpen}
+        stages={columns}
+        onAddStage={handleAddStage}
+        onRenameStage={handleRenameStage}
+        onDeleteStage={handleDeleteStage}
       />
     </>
   );
