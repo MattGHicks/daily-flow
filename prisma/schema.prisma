@@ -52,6 +52,7 @@ model Task {
   description           String?
   priority              String    // low, medium, high
   status                String    // backlog, todo, in-progress, review, done
+  order                 Int       @default(0) // Position within the column
   assignee              String?
   dueDate               DateTime?
   tags                  String[]

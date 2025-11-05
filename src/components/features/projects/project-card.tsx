@@ -1,16 +1,20 @@
 'use client';
 
-import { Project, projectStatusColors } from '@/types/project';
+import { Project } from '@/types/project';
 import { Card, CardContent } from '@/components/ui/card';
 import { motion } from 'framer-motion';
+import { Calendar, Folder } from 'lucide-react';
+import { getMondayColorClasses } from '@/lib/monday-colors';
 import { cn } from '@/lib/utils';
-import { Calendar } from 'lucide-react';
 
 interface ProjectCardProps {
   project: Project;
 }
 
 export function ProjectCard({ project }: ProjectCardProps) {
+  // Get color classes from Monday.com status color
+  const statusColorClasses = getMondayColorClasses(project.mondayStatusColor || null);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -24,15 +28,15 @@ export function ProjectCard({ project }: ProjectCardProps) {
             {/* Project Title */}
             <h3 className="font-semibold text-lg leading-tight">{project.title}</h3>
 
-            {/* Status Badge */}
-            <div className="flex items-center justify-between">
+            {/* Status and Date */}
+            <div className="flex items-center justify-between flex-wrap gap-2">
               <span
                 className={cn(
-                  'inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border capitalize',
-                  projectStatusColors[project.status]
+                  'inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border',
+                  statusColorClasses
                 )}
               >
-                {project.status.replace('-', ' ')}
+                {project.status || 'No Status'}
               </span>
 
               {project.lastUpdated && (
@@ -43,11 +47,20 @@ export function ProjectCard({ project }: ProjectCardProps) {
               )}
             </div>
 
-            {/* Source Indicator */}
-            <div className="pt-2 border-t border-border">
-              <p className="text-xs text-muted-foreground">
-                From <span className="font-medium text-foreground">Monday.com</span>
-              </p>
+            {/* Board and Group Info */}
+            <div className="pt-2 border-t border-border space-y-1">
+              {project.boardName && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Folder className="h-3 w-3" />
+                  <span className="font-medium text-foreground">{project.boardName}</span>
+                  {project.groupName && (
+                    <>
+                      <span>·</span>
+                      <span>{project.groupName}</span>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </CardContent>

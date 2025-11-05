@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -11,12 +11,12 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { mockProjects } from '@/lib/data/mock-projects';
 import { mockMessageThreads } from '@/lib/data/mock-messages';
-import { Project, projectStatusColors } from '@/types/project';
+import { Project } from '@/types/project';
 import { MessageThread } from '@/types/message';
-import { Search, FolderKanban, MessageSquare, X, Check } from 'lucide-react';
+import { Search, FolderKanban, MessageSquare, X, Check, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getMondayColorClasses } from '@/lib/monday-colors';
 
 interface LinkSelectorModalProps {
   open: boolean;
@@ -41,8 +41,32 @@ export function LinkSelectorModal({
 }: LinkSelectorModalProps) {
   const [projectSearch, setProjectSearch] = useState('');
   const [threadSearch, setThreadSearch] = useState('');
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [isLoadingProjects, setIsLoadingProjects] = useState(false);
 
-  const filteredProjects = mockProjects.filter((project) =>
+  // Fetch Monday.com projects when modal opens
+  useEffect(() => {
+    if (open) {
+      fetchProjects();
+    }
+  }, [open]);
+
+  const fetchProjects = async () => {
+    setIsLoadingProjects(true);
+    try {
+      const response = await fetch('/api/monday/projects');
+      const result = await response.json();
+      if (result.success) {
+        setProjects(result.data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching projects:', error);
+    } finally {
+      setIsLoadingProjects(false);
+    }
+  };
+
+  const filteredProjects = projects.filter((project) =>
     project.title.toLowerCase().includes(projectSearch.toLowerCase())
   );
 
@@ -52,7 +76,7 @@ export function LinkSelectorModal({
       .includes(threadSearch.toLowerCase())
   );
 
-  const currentProject = mockProjects.find((p) => p.id === currentProjectId);
+  const currentProject = projects.find((p) => p.id === currentProjectId);
   const currentThread = mockMessageThreads.find((t) => t.id === currentThreadId);
 
   return (
@@ -117,51 +141,61 @@ export function LinkSelectorModal({
               </div>
             )}
 
+            {/* Loading State */}
+            {isLoadingProjects && (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            )}
+
             {/* Project List */}
-            <div className="flex-1 overflow-y-auto space-y-2 pr-2 scrollbar-thin">
-              {filteredProjects.map((project) => {
-                const isLinked = project.id === currentProjectId;
-                return (
-                  <button
-                    key={project.id}
-                    onClick={() => {
-                      if (!isLinked) {
-                        onLinkProject(project.id);
-                        onOpenChange(false);
-                      }
-                    }}
-                    className={cn(
-                      'w-full text-left p-3 rounded-lg border transition-colors',
-                      isLinked
-                        ? 'bg-primary/10 border-primary'
-                        : 'bg-card border-border hover:bg-muted'
-                    )}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">{project.title}</p>
-                        <span
-                          className={cn(
-                            'inline-flex items-center mt-1.5 px-2 py-0.5 rounded-full text-xs font-medium border capitalize',
-                            projectStatusColors[project.status]
-                          )}
-                        >
-                          {project.status.replace('-', ' ')}
-                        </span>
-                      </div>
-                      {isLinked && (
-                        <Check className="h-5 w-5 text-primary shrink-0" />
+            {!isLoadingProjects && (
+              <div className="flex-1 overflow-y-auto space-y-2 pr-2 scrollbar-thin">
+                {filteredProjects.map((project) => {
+                  const isLinked = project.id === currentProjectId;
+                  return (
+                    <button
+                      key={project.id}
+                      onClick={() => {
+                        if (!isLinked) {
+                          onLinkProject(project.id);
+                          onOpenChange(false);
+                        }
+                      }}
+                      className={cn(
+                        'w-full text-left p-3 rounded-lg border transition-colors',
+                        isLinked
+                          ? 'bg-primary/10 border-primary'
+                          : 'bg-card border-border hover:bg-muted'
                       )}
-                    </div>
-                  </button>
-                );
-              })}
-              {filteredProjects.length === 0 && (
-                <div className="text-center py-8 text-sm text-muted-foreground">
-                  No projects found
-                </div>
-              )}
-            </div>
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate">{project.title}</p>
+                          <span
+                            className={cn(
+                              'inline-flex items-center mt-1.5 px-2 py-0.5 rounded-full text-xs font-medium border',
+                              getMondayColorClasses(project.mondayStatusColor || null)
+                            )}
+                          >
+                            {project.status}
+                          </span>
+                        </div>
+                        {isLinked && (
+                          <Check className="h-5 w-5 text-primary shrink-0" />
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+                {filteredProjects.length === 0 && (
+                  <div className="text-center py-8 text-sm text-muted-foreground">
+                    No projects found
+                  </div>
+                )}
+              </div>
+            )}
+
           </TabsContent>
 
           {/* Message Threads Tab */}

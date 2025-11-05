@@ -139,10 +139,92 @@ export default function TasksPage() {
   const [linkModalOpen, setLinkModalOpen] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
   const selectedTask = columns
     .flatMap((col) => col.tasks)
     .find((task) => task.id === selectedTaskId);
+
+  // Fetch tasks from database on mount
+  useEffect(() => {
+    const fetchTasks = async () => {
+      try {
+        const response = await fetch('/api/tasks');
+        const result = await response.json();
+
+        if (result.success) {
+          // Convert flat task list to column structure
+          const tasksByStatus: Record<string, Task[]> = {
+            backlog: [],
+            todo: [],
+            'in-progress': [],
+            review: [],
+            done: [],
+          };
+
+          result.data.forEach((task: any) => {
+            if (tasksByStatus[task.status]) {
+              tasksByStatus[task.status].push(task);
+            }
+          });
+
+          const loadedColumns = initialColumns.map((col) => ({
+            ...col,
+            tasks: tasksByStatus[col.id] || [],
+          }));
+
+          setColumns(loadedColumns);
+        }
+      } catch (error) {
+        console.error('Error fetching tasks:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchTasks();
+  }, []);
+
+  // Save tasks to database whenever columns change (debounced)
+  useEffect(() => {
+    if (isLoading) return; // Don't save during initial load
+
+    const saveTimer = setTimeout(async () => {
+      setIsSaving(true);
+      try {
+        // Flatten tasks with updated order and status
+        const updates = columns.flatMap((col) =>
+          col.tasks.map((task, index) => ({
+            id: task.id,
+            status: col.id,
+            order: index,
+            title: task.title,
+            description: task.description,
+            priority: task.priority,
+            assignee: task.assignee,
+            dueDate: task.dueDate,
+            tags: task.tags,
+            project: task.project,
+            linkedProjectId: task.linkedProjectId,
+            linkedMessageThreadId: task.linkedMessageThreadId,
+          }))
+        );
+
+        await fetch('/api/tasks', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ updates }),
+        });
+      } catch (error) {
+        console.error('Error saving tasks:', error);
+      } finally {
+        setIsSaving(false);
+      }
+    }, 1000); // Debounce for 1 second
+
+    return () => clearTimeout(saveTimer);
+  }, [columns, isLoading]);
 
   // Auto-open create modal if ?create=true query param is present
   useEffect(() => {
@@ -212,20 +294,31 @@ export default function TasksPage() {
     );
   };
 
-  const handleCreateTask = (taskData: Omit<Task, 'id'>) => {
-    const newTask: Task = {
-      ...taskData,
-      id: `task-${Date.now()}`, // Generate a unique ID
-    };
+  const handleCreateTask = async (taskData: Omit<Task, 'id'>) => {
+    try {
+      const response = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(taskData),
+      });
 
-    // Add the new task to the backlog column
-    setColumns((cols) =>
-      cols.map((col) =>
-        col.id === 'backlog'
-          ? { ...col, tasks: [...col.tasks, newTask] }
-          : col
-      )
-    );
+      const result = await response.json();
+
+      if (result.success) {
+        const newTask = result.data;
+
+        // Add the new task to the appropriate column
+        setColumns((cols) =>
+          cols.map((col) =>
+            col.id === newTask.status
+              ? { ...col, tasks: [...col.tasks, newTask] }
+              : col
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Error creating task:', error);
+    }
   };
 
   return (
@@ -241,6 +334,9 @@ export default function TasksPage() {
                 </p>
               </div>
               <div className="flex items-center gap-4">
+                {isSaving && (
+                  <span className="text-xs text-muted-foreground">Saving...</span>
+                )}
                 <span className="text-sm text-muted-foreground">
                   {columns.reduce((acc, col) => acc + col.tasks.length, 0)} total tasks
                 </span>
@@ -252,11 +348,17 @@ export default function TasksPage() {
             </div>
           </div>
 
-          <KanbanBoard
-            columns={columns}
-            onColumnsChange={setColumns}
-            onTaskLinkClick={handleTaskLinkClick}
-          />
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-sm text-muted-foreground">Loading tasks...</div>
+            </div>
+          ) : (
+            <KanbanBoard
+              columns={columns}
+              onColumnsChange={setColumns}
+              onTaskLinkClick={handleTaskLinkClick}
+            />
+          )}
         </AnimatedContainer>
       </div>
 

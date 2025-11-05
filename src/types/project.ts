@@ -2,8 +2,16 @@
 export interface Project {
   id: string;
   title: string;
-  status: ProjectStatus;
+  status: string; // Can be any Monday.com status
   lastUpdated?: string;
+  // Monday-specific fields
+  boardName?: string; // Which Monday.com board this is from
+  groupName?: string; // Group within the board
+  mondayItemId?: string; // Original Monday.com item ID
+  mondayBoardId?: string; // Monday.com board ID
+  mondayUrl?: string; // Direct link to Monday.com item
+  mondayStatus?: string; // Original Monday.com status label
+  mondayStatusColor?: string | null; // Monday.com status color
 }
 
 export type ProjectStatus =

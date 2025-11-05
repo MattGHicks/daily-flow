@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -37,11 +37,34 @@ const secondaryNavigation = [
 export function Sidebar() {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+  const [hasLoadedFromStorage, setHasLoadedFromStorage] = useState(false);
+
+  // Load from localStorage after mount to avoid hydration mismatch
+  useEffect(() => {
+    setIsMounted(true);
+    const saved = localStorage.getItem('sidebar-collapsed');
+    if (saved === 'true') {
+      setIsCollapsed(true);
+    }
+    // Small delay to ensure the state is set before enabling animations
+    setTimeout(() => setHasLoadedFromStorage(true), 50);
+  }, []);
+
+  // Save to localStorage whenever collapsed state changes (only after mount)
+  useEffect(() => {
+    if (isMounted && hasLoadedFromStorage) {
+      localStorage.setItem('sidebar-collapsed', String(isCollapsed));
+    }
+  }, [isCollapsed, isMounted, hasLoadedFromStorage]);
 
   return (
     <motion.aside
       animate={{ width: isCollapsed ? 80 : 256 }}
-      transition={{ duration: 0.3, ease: 'easeInOut' }}
+      transition={{
+        duration: hasLoadedFromStorage ? 0.3 : 0,
+        ease: 'easeInOut'
+      }}
       className="relative flex h-screen flex-col bg-card border-r border-border"
     >
       {/* Logo / Brand */}
@@ -50,10 +73,10 @@ export function Sidebar() {
           {!isCollapsed ? (
             <motion.div
               key="full-logo"
-              initial={{ opacity: 0 }}
+              initial={{ opacity: hasLoadedFromStorage ? 0 : 1 }}
               animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
+              exit={{ opacity: hasLoadedFromStorage ? 0 : 1 }}
+              transition={{ duration: hasLoadedFromStorage ? 0.2 : 0 }}
               className="flex items-center gap-2"
             >
               <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/60">
@@ -71,10 +94,10 @@ export function Sidebar() {
           ) : (
             <motion.div
               key="collapsed-logo"
-              initial={{ opacity: 0 }}
+              initial={{ opacity: hasLoadedFromStorage ? 0 : 1 }}
               animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
+              exit={{ opacity: hasLoadedFromStorage ? 0 : 1 }}
+              transition={{ duration: hasLoadedFromStorage ? 0.2 : 0 }}
               className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/60 mx-auto"
             >
               <span className="text-primary-foreground font-bold text-lg">DF</span>
@@ -109,10 +132,10 @@ export function Sidebar() {
             <AnimatePresence>
               {!isCollapsed && (
                 <motion.span
-                  initial={{ opacity: 0, width: 0 }}
+                  initial={{ opacity: hasLoadedFromStorage ? 0 : 1, width: hasLoadedFromStorage ? 0 : 'auto' }}
                   animate={{ opacity: 1, width: 'auto' }}
-                  exit={{ opacity: 0, width: 0 }}
-                  transition={{ duration: 0.2 }}
+                  exit={{ opacity: hasLoadedFromStorage ? 0 : 1, width: hasLoadedFromStorage ? 0 : 'auto' }}
+                  transition={{ duration: hasLoadedFromStorage ? 0.2 : 0 }}
                 >
                   Quick Create
                 </motion.span>
@@ -124,13 +147,13 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 space-y-1 px-3 overflow-y-auto scrollbar-thin">
-        <div className="space-y-1">
+        <div>
           {navigation.map((item) => {
             const isActive = pathname === item.href;
             const Icon = item.icon;
 
             return (
-              <Link key={item.name} href={item.href}>
+              <Link key={item.name} href={item.href} className="block mb-2">
                 <motion.div
                   className={cn(
                     'group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all',
@@ -147,10 +170,10 @@ export function Sidebar() {
                   <AnimatePresence>
                     {!isCollapsed && (
                       <motion.span
-                        initial={{ opacity: 0, width: 0 }}
+                        initial={{ opacity: hasLoadedFromStorage ? 0 : 1, width: hasLoadedFromStorage ? 0 : 'auto' }}
                         animate={{ opacity: 1, width: 'auto' }}
-                        exit={{ opacity: 0, width: 0 }}
-                        transition={{ duration: 0.2 }}
+                        exit={{ opacity: hasLoadedFromStorage ? 0 : 1, width: hasLoadedFromStorage ? 0 : 'auto' }}
+                        transition={{ duration: hasLoadedFromStorage ? 0.2 : 0 }}
                       >
                         {item.name}
                       </motion.span>
@@ -174,13 +197,13 @@ export function Sidebar() {
         <div className="my-4 h-px bg-border" />
 
         {/* Secondary Navigation */}
-        <div className="space-y-1">
+        <div>
           {secondaryNavigation.map((item) => {
             const isActive = pathname === item.href;
             const Icon = item.icon;
 
             return (
-              <Link key={item.name} href={item.href}>
+              <Link key={item.name} href={item.href} className="block mb-2">
                 <motion.div
                   className={cn(
                     'group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
@@ -197,10 +220,10 @@ export function Sidebar() {
                   <AnimatePresence>
                     {!isCollapsed && (
                       <motion.span
-                        initial={{ opacity: 0, width: 0 }}
+                        initial={{ opacity: hasLoadedFromStorage ? 0 : 1, width: hasLoadedFromStorage ? 0 : 'auto' }}
                         animate={{ opacity: 1, width: 'auto' }}
-                        exit={{ opacity: 0, width: 0 }}
-                        transition={{ duration: 0.2 }}
+                        exit={{ opacity: hasLoadedFromStorage ? 0 : 1, width: hasLoadedFromStorage ? 0 : 'auto' }}
+                        transition={{ duration: hasLoadedFromStorage ? 0.2 : 0 }}
                       >
                         {item.name}
                       </motion.span>

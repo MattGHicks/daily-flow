@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 import {
   Settings as SettingsIcon,
   Key,
@@ -14,10 +15,13 @@ import {
   Bell,
   Save,
   Eye,
-  EyeOff
+  EyeOff,
+  Loader2
 } from 'lucide-react';
 
 export default function SettingsPage() {
+  const { toast } = useToast();
+
   // Integration API Keys
   const [mondayApiKey, setMondayApiKey] = useState('');
   const [redmineApiKey, setRedmineApiKey] = useState('');
@@ -35,63 +39,149 @@ export default function SettingsPage() {
 
   // Theme settings
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [compactMode, setCompactMode] = useState(false);
+  const [animationsEnabled, setAnimationsEnabled] = useState(true);
 
-  // Load settings from localStorage on mount
+  // Loading states
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSavingIntegrations, setIsSavingIntegrations] = useState(false);
+  const [isSavingAppearance, setIsSavingAppearance] = useState(false);
+
+  // Load settings from database on mount
   useEffect(() => {
-    const loadSettings = () => {
+    const loadSettings = async () => {
       try {
-        const savedMonday = localStorage.getItem('monday_api_key');
-        const savedRedmineKey = localStorage.getItem('redmine_api_key');
-        const savedRedmineUrl = localStorage.getItem('redmine_url');
-        const savedGoogleId = localStorage.getItem('google_client_id');
-        const savedGoogleSecret = localStorage.getItem('google_client_secret');
-        const savedSpotifyId = localStorage.getItem('spotify_client_id');
-        const savedSpotifySecret = localStorage.getItem('spotify_client_secret');
-        const savedTheme = localStorage.getItem('theme') as 'dark' | 'light';
+        setIsLoading(true);
+        const response = await fetch('/api/settings');
+        const result = await response.json();
 
-        if (savedMonday) setMondayApiKey(savedMonday);
-        if (savedRedmineKey) setRedmineApiKey(savedRedmineKey);
-        if (savedRedmineUrl) setRedmineUrl(savedRedmineUrl);
-        if (savedGoogleId) setGoogleClientId(savedGoogleId);
-        if (savedGoogleSecret) setGoogleClientSecret(savedGoogleSecret);
-        if (savedSpotifyId) setSpotifyClientId(savedSpotifyId);
-        if (savedSpotifySecret) setSpotifyClientSecret(savedSpotifySecret);
-        if (savedTheme) setTheme(savedTheme);
+        if (result.success && result.data) {
+          const settings = result.data;
+
+          // Set integration fields
+          if (settings.mondayApiKey) setMondayApiKey(settings.mondayApiKey);
+          if (settings.redmineApiKey) setRedmineApiKey(settings.redmineApiKey);
+          if (settings.redmineUrl) setRedmineUrl(settings.redmineUrl);
+          if (settings.googleClientId) setGoogleClientId(settings.googleClientId);
+          if (settings.googleClientSecret) setGoogleClientSecret(settings.googleClientSecret);
+          if (settings.spotifyClientId) setSpotifyClientId(settings.spotifyClientId);
+          if (settings.spotifyClientSecret) setSpotifyClientSecret(settings.spotifyClientSecret);
+
+          // Set appearance fields
+          if (settings.theme) setTheme(settings.theme);
+          if (settings.compactMode !== undefined) setCompactMode(settings.compactMode);
+          if (settings.animationsEnabled !== undefined) setAnimationsEnabled(settings.animationsEnabled);
+        }
       } catch (error) {
         console.error('Error loading settings:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load settings. Please refresh the page.',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsLoading(false);
       }
     };
 
     loadSettings();
-  }, []);
+  }, [toast]);
 
-  const handleSaveIntegrations = () => {
+  const handleSaveIntegrations = async () => {
     try {
-      // Save to localStorage
-      if (mondayApiKey) localStorage.setItem('monday_api_key', mondayApiKey);
-      if (redmineApiKey) localStorage.setItem('redmine_api_key', redmineApiKey);
-      if (redmineUrl) localStorage.setItem('redmine_url', redmineUrl);
-      if (googleClientId) localStorage.setItem('google_client_id', googleClientId);
-      if (googleClientSecret) localStorage.setItem('google_client_secret', googleClientSecret);
-      if (spotifyClientId) localStorage.setItem('spotify_client_id', spotifyClientId);
-      if (spotifyClientSecret) localStorage.setItem('spotify_client_secret', spotifyClientSecret);
+      setIsSavingIntegrations(true);
 
-      alert('Integration settings saved successfully!');
+      const response = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          mondayApiKey: mondayApiKey || null,
+          redmineApiKey: redmineApiKey || null,
+          redmineUrl: redmineUrl || null,
+          googleClientId: googleClientId || null,
+          googleClientSecret: googleClientSecret || null,
+          spotifyClientId: spotifyClientId || null,
+          spotifyClientSecret: spotifyClientSecret || null,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        toast({
+          title: 'Success',
+          description: 'Integration settings saved successfully!',
+        });
+      } else {
+        throw new Error(result.error || 'Failed to save settings');
+      }
     } catch (error) {
       console.error('Error saving integration settings:', error);
-      alert('Failed to save integration settings');
+      toast({
+        title: 'Error',
+        description: 'Failed to save integration settings. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSavingIntegrations(false);
     }
   };
 
-  const handleSaveAppearance = () => {
+  const handleSaveAppearance = async () => {
     try {
-      localStorage.setItem('theme', theme);
-      alert('Appearance settings saved successfully!');
+      setIsSavingAppearance(true);
+
+      const response = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          theme,
+          compactMode,
+          animationsEnabled,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        toast({
+          title: 'Success',
+          description: 'Appearance settings saved successfully!',
+        });
+      } else {
+        throw new Error(result.error || 'Failed to save settings');
+      }
     } catch (error) {
       console.error('Error saving appearance settings:', error);
-      alert('Failed to save appearance settings');
+      toast({
+        title: 'Error',
+        description: 'Failed to save appearance settings. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSavingAppearance(false);
     }
   };
+
+  // Show loading state while fetching settings
+  if (isLoading) {
+    return (
+      <div className="p-6">
+        <AnimatedContainer animation="slideUp">
+          <div className="flex items-center justify-center h-[60vh]">
+            <div className="text-center space-y-4">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+              <p className="text-muted-foreground">Loading settings...</p>
+            </div>
+          </div>
+        </AnimatedContainer>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">
@@ -317,9 +407,22 @@ export default function SettingsPage() {
             </Card>
 
             <div className="flex justify-end">
-              <Button onClick={handleSaveIntegrations} size="lg">
-                <Save className="h-4 w-4 mr-2" />
-                Save Integration Settings
+              <Button
+                onClick={handleSaveIntegrations}
+                size="lg"
+                disabled={isSavingIntegrations}
+              >
+                {isSavingIntegrations ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Save Integration Settings
+                  </>
+                )}
               </Button>
             </div>
           </TabsContent>
@@ -397,9 +500,22 @@ export default function SettingsPage() {
             </Card>
 
             <div className="flex justify-end">
-              <Button onClick={handleSaveAppearance} size="lg">
-                <Save className="h-4 w-4 mr-2" />
-                Save Appearance Settings
+              <Button
+                onClick={handleSaveAppearance}
+                size="lg"
+                disabled={isSavingAppearance}
+              >
+                {isSavingAppearance ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Save Appearance Settings
+                  </>
+                )}
               </Button>
             </div>
           </TabsContent>

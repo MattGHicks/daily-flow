@@ -1,12 +1,14 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { Task } from '@/types/kanban';
+import { Project } from '@/types/project';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Calendar, AlertCircle, Tag, FolderKanban, MessageSquare, Link, ExternalLink } from 'lucide-react';
+import { Calendar, AlertCircle, Tag, MessageSquare, Link, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { mockProjects } from '@/lib/data/mock-projects';
 import { mockMessageThreads } from '@/lib/data/mock-messages';
 import { Button } from '@/components/ui/button';
+import { MondayIcon } from '@/components/icons/monday-icon';
 
 interface TaskCardProps {
   task: Task;
@@ -21,7 +23,26 @@ const priorityColors = {
 };
 
 export function TaskCard({ task, isDragging = false, onLinkClick }: TaskCardProps) {
-  const linkedProject = mockProjects.find((p) => p.id === task.linkedProjectId);
+  const [projects, setProjects] = useState<Project[]>([]);
+
+  // Fetch projects on mount
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        const response = await fetch('/api/monday/projects');
+        const result = await response.json();
+        if (result.success) {
+          setProjects(result.data || []);
+        }
+      } catch (error) {
+        console.error('Error fetching projects:', error);
+      }
+    };
+
+    fetchProjects();
+  }, []);
+
+  const linkedProject = projects.find((p) => p.id === task.linkedProjectId);
   const linkedThread = mockMessageThreads.find((t) => t.id === task.linkedMessageThreadId);
 
   return (
@@ -64,8 +85,16 @@ export function TaskCard({ task, isDragging = false, onLinkClick }: TaskCardProp
         {(linkedProject || linkedThread) && (
           <div className="space-y-1.5 pb-2 border-b border-border">
             {linkedProject && (
-              <button className="w-full flex items-center gap-2 text-left p-1.5 rounded hover:bg-muted transition-colors group">
-                <FolderKanban className="h-3.5 w-3.5 text-primary shrink-0" />
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (linkedProject.mondayUrl) {
+                    window.open(linkedProject.mondayUrl, '_blank', 'noopener,noreferrer');
+                  }
+                }}
+                className="w-full flex items-center gap-2 text-left p-1.5 rounded hover:bg-muted transition-colors group"
+              >
+                <MondayIcon className="h-3.5 w-3.5 text-primary shrink-0" />
                 <span className="text-xs text-muted-foreground flex-1 truncate group-hover:text-foreground">
                   {linkedProject.title}
                 </span>
