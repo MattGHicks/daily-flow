@@ -234,6 +234,5 @@ export default function DashboardPage() {
           </Card>
         </AnimatedContainer>
       </div>
-    </div>
   );
 }

@@ -136,6 +136,5 @@ export default function CalendarPage() {
           </Card>
         </AnimatedContainer>
       </div>
-    </div>
   );
 }

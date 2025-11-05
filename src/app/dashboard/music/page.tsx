@@ -134,6 +134,5 @@ export default function MusicPage() {
           </Card>
         </AnimatedContainer>
       </div>
-    </div>
   );
 }
