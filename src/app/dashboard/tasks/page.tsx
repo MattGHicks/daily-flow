@@ -8,7 +8,7 @@ import { AnimatedContainer } from '@/components/shared/animated-container';
 import { LinkSelectorModal } from '@/components/features/tasks/link-selector-modal';
 import { CreateTaskModal } from '@/components/features/tasks/create-task-modal';
 import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, ListTodo } from 'lucide-react';
 
 // Sample task data - can be linked to Monday.com projects and Redmine threads
 const initialColumns: Column[] = [
@@ -327,11 +327,16 @@ export default function TasksPage() {
         <AnimatedContainer animation="slideUp">
           <div className="mb-6">
             <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-bold">Tasks</h2>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Drag and drop tasks between columns to update their status
-                </p>
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                  <ListTodo className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold">Tasks</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Drag and drop tasks between columns to update their status
+                  </p>
+                </div>
               </div>
               <div className="flex items-center gap-4">
                 {isSaving && (

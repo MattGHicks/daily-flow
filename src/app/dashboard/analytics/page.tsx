@@ -1,20 +1,27 @@
 'use client';
 
-import { DashboardHeader } from '@/components/shared/dashboard-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AnimatedContainer } from '@/components/shared/animated-container';
-import { TrendingUp, Clock, CheckCircle2, Target } from 'lucide-react';
+import { TrendingUp, Clock, CheckCircle2, Target, BarChart3 } from 'lucide-react';
 
 export default function AnalyticsPage() {
   return (
-    <>
-      <DashboardHeader
-        title="Analytics"
-        subtitle="Track your productivity and performance"
-      />
+    <div className="p-6 space-y-6">
+      <div className="mb-6">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+            <BarChart3 className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold">Analytics</h2>
+            <p className="text-sm text-muted-foreground">
+              Track your productivity and performance
+            </p>
+          </div>
+        </div>
+      </div>
 
-      <div className="p-6 space-y-6">
-        {/* Key Metrics */}
+      {/* Key Metrics */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <AnimatedContainer animation="slideUp">
             <Card>
@@ -142,6 +149,6 @@ export default function AnalyticsPage() {
           </Card>
         </AnimatedContainer>
       </div>
-    </>
+    </div>
   );
 }

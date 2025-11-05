@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { DashboardHeader } from '@/components/shared/dashboard-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AnimatedContainer } from '@/components/shared/animated-container';
@@ -80,15 +79,23 @@ export default function MessagesPage() {
   ).length;
 
   return (
-    <>
-      <DashboardHeader
-        title="Messages"
-        subtitle="Client communications from Redmine"
-      />
+    <div className="p-6 space-y-6">
+      <div className="mb-6">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+            <MessageSquare className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold">Messages</h2>
+            <p className="text-sm text-muted-foreground">
+              Client communications from Redmine
+            </p>
+          </div>
+        </div>
+      </div>
 
-      <div className="p-6 space-y-6">
-        {/* Loading State */}
-        {isLoading ? (
+      {/* Loading State */}
+      {isLoading ? (
           <AnimatedContainer animation="slideUp">
             <div className="flex items-center justify-center py-12">
               <div className="text-center space-y-4">
@@ -306,9 +313,8 @@ export default function MessagesPage() {
             </CardContent>
           </Card>
         </AnimatedContainer>
-          </>
-        )}
-      </div>
-    </>
+      </>
+      )}
+    </div>
   );
 }

@@ -1,14 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { DashboardHeader } from '@/components/shared/dashboard-header';
 import { ProjectCard } from '@/components/features/projects/project-card';
 import { AnimatedContainer } from '@/components/shared/animated-container';
 import { Project } from '@/types/project';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Filter, Loader2, RefreshCw, AlertCircle } from 'lucide-react';
+import { Search, Filter, Loader2, RefreshCw, AlertCircle, FolderKanban } from 'lucide-react';
 
 const AUTO_REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
 const BOARD_NAMES = ['All Boards', 'Revize Projects 2.0', 'Revize Projects', 'QA Board'];
@@ -93,14 +92,22 @@ export default function ProjectsPage() {
   }, {} as Record<string, number>);
 
   return (
-    <>
-      <DashboardHeader
-        title="Projects"
-        subtitle="Overview of your Monday.com projects (read-only)"
-      />
+    <div className="p-6 space-y-6">
+      <div className="mb-6">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+            <FolderKanban className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold">Projects</h2>
+            <p className="text-sm text-muted-foreground">
+              Overview of your Monday.com projects (read-only)
+            </p>
+          </div>
+        </div>
+      </div>
 
-      <div className="p-6 space-y-6">
-        {/* Search and Filters */}
+      {/* Search and Filters */}
         <AnimatedContainer animation="slideUp">
           <div className="flex flex-col gap-4">
             {/* Search and Refresh */}
@@ -273,6 +280,6 @@ export default function ProjectsPage() {
           </div>
         </AnimatedContainer>
       </div>
-    </>
+    </div>
   );
 }

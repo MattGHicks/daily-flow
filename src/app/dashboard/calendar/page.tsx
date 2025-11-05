@@ -1,6 +1,5 @@
 'use client';
 
-import { DashboardHeader } from '@/components/shared/dashboard-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AnimatedContainer } from '@/components/shared/animated-container';
 import { Calendar as CalendarIcon, Clock, Video, MapPin } from 'lucide-react';
@@ -42,14 +41,22 @@ const upcomingEvents = [
 
 export default function CalendarPage() {
   return (
-    <>
-      <DashboardHeader
-        title="Calendar"
-        subtitle="View and manage your schedule"
-      />
+    <div className="p-6 space-y-6">
+      <div className="mb-6">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+            <CalendarIcon className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold">Calendar</h2>
+            <p className="text-sm text-muted-foreground">
+              View and manage your schedule
+            </p>
+          </div>
+        </div>
+      </div>
 
-      <div className="p-6 space-y-6">
-        <AnimatedContainer animation="slideUp">
+      <AnimatedContainer animation="slideUp">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -129,6 +136,6 @@ export default function CalendarPage() {
           </Card>
         </AnimatedContainer>
       </div>
-    </>
+    </div>
   );
 }

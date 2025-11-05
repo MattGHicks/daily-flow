@@ -1,6 +1,5 @@
 'use client';
 
-import { DashboardHeader } from '@/components/shared/dashboard-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AnimatedContainer } from '@/components/shared/animated-container';
 import { motion } from 'framer-motion';
@@ -12,6 +11,7 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
+  LayoutDashboard,
 } from 'lucide-react';
 import { staggerContainer } from '@/lib/animations';
 
@@ -65,14 +65,22 @@ const upcomingEvents = [
 
 export default function DashboardPage() {
   return (
-    <>
-      <DashboardHeader
-        title="Dashboard"
-        subtitle="Welcome back! Here's what's happening today."
-      />
+    <div className="p-6 space-y-6">
+      <div className="mb-6">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+            <LayoutDashboard className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold">Dashboard</h2>
+            <p className="text-sm text-muted-foreground">
+              Welcome back! Here's what's happening today.
+            </p>
+          </div>
+        </div>
+      </div>
 
-      <div className="p-6 space-y-6">
-        {/* Stats Grid */}
+      {/* Stats Grid */}
         <motion.div
           variants={staggerContainer}
           initial="initial"
@@ -226,6 +234,6 @@ export default function DashboardPage() {
           </Card>
         </AnimatedContainer>
       </div>
-    </>
+    </div>
   );
 }
