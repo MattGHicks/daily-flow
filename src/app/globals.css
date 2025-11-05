@@ -1,0 +1,74 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Based on the design reference - dark theme with warm brown/tan accents */
+    --background: 24 14% 16%; /* #2D2A26 - Dark brown background */
+    --foreground: 30 15% 85%; /* Light beige text */
+
+    --card: 25 12% 20%; /* Slightly lighter than background */
+    --card-foreground: 30 15% 85%;
+
+    --popover: 25 12% 20%;
+    --popover-foreground: 30 15% 85%;
+
+    --primary: 32 28% 64%; /* #D4C5B0 - Warm tan accent */
+    --primary-foreground: 24 14% 16%;
+
+    --secondary: 30 18% 45%; /* #8B7355 - Medium brown */
+    --secondary-foreground: 30 15% 85%;
+
+    --muted: 25 12% 25%;
+    --muted-foreground: 30 10% 60%;
+
+    --accent: 32 28% 64%;
+    --accent-foreground: 24 14% 16%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 30 15% 85%;
+
+    --border: 25 12% 28%;
+    --input: 25 12% 28%;
+    --ring: 32 28% 64%;
+
+    --chart-1: 32 28% 64%;
+    --chart-2: 30 18% 45%;
+    --chart-3: 35 35% 55%;
+    --chart-4: 28 20% 50%;
+    --chart-5: 25 15% 40%;
+
+    --radius: 0.75rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+/* Custom scrollbar styling */
+@layer utilities {
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    @apply bg-muted rounded-full;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground;
+  }
+}
