@@ -8,7 +8,7 @@ const SENSITIVE_FIELDS = [
   'redmineApiKey',
   'googleClientSecret',
   'spotifyClientSecret',
-] as const;
+];
 
 // Temporary user ID for development (will be replaced with actual auth)
 const DEV_USER_ID = 'dev-user-001';
@@ -55,7 +55,7 @@ export async function GET() {
     }
 
     // Decrypt sensitive fields before returning
-    const decryptedSettings = decryptFields(user.settings, SENSITIVE_FIELDS);
+    const decryptedSettings = decryptFields(user.settings, SENSITIVE_FIELDS as (keyof typeof user.settings)[]);
 
     return NextResponse.json({
       success: true,
@@ -121,7 +121,7 @@ export async function PUT(request: Request) {
     });
 
     // Decrypt before returning
-    const decryptedSettings = decryptFields(settings, SENSITIVE_FIELDS);
+    const decryptedSettings = decryptFields(settings, SENSITIVE_FIELDS as (keyof typeof settings)[]);
 
     return NextResponse.json({
       success: true,
@@ -166,7 +166,7 @@ export async function DELETE(request: Request) {
     });
 
     // Decrypt before returning
-    const decryptedSettings = decryptFields(settings, SENSITIVE_FIELDS);
+    const decryptedSettings = decryptFields(settings, SENSITIVE_FIELDS as (keyof typeof settings)[]);
 
     return NextResponse.json({
       success: true,

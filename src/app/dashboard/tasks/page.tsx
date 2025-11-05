@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { KanbanBoard } from '@/components/features/kanban/kanban-board';
 import { Column, Task } from '@/types/kanban';
@@ -11,7 +11,7 @@ import { StageManagementModal } from '@/components/features/tasks/stage-manageme
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Settings2 } from 'lucide-react';
 
-export default function TasksPage() {
+function TasksPageContent() {
   const searchParams = useSearchParams();
   const [columns, setColumns] = useState<Column[]>([]);
   const [linkModalOpen, setLinkModalOpen] = useState(false);
@@ -365,5 +365,19 @@ export default function TasksPage() {
         onDeleteStage={handleDeleteStage}
       />
     </>
+  );
+}
+
+export default function TasksPage() {
+  return (
+    <Suspense fallback={
+      <div className="p-6">
+        <div className="flex items-center justify-center py-12">
+          <div className="text-sm text-muted-foreground">Loading...</div>
+        </div>
+      </div>
+    }>
+      <TasksPageContent />
+    </Suspense>
   );
 }

@@ -96,7 +96,7 @@ export async function GET() {
     const { fetchRedmineIssue } = await import('@/lib/api/redmine');
 
     const detailedIssuesPromises = issues.map((issue) =>
-      fetchRedmineIssue(settings.redmineUrl, apiKey, issue.id)
+      fetchRedmineIssue(settings.redmineUrl!, apiKey, issue.id)
     );
 
     const detailedIssues = await Promise.all(detailedIssuesPromises);

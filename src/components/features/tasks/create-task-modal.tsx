@@ -25,7 +25,7 @@ import { Task, Column } from '@/types/kanban';
 interface CreateTaskModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreateTask: (task: Omit<Task, 'id'>) => void;
+  onCreateTask: (task: Omit<Task, 'id'> & { status?: string }) => void;
   stages: Column[];
 }
 
@@ -50,7 +50,7 @@ export function CreateTaskModal({
     // Use selected status or first stage as default
     const taskStatus = status || stages[0]?.id || 'backlog';
 
-    const newTask: Omit<Task, 'id'> = {
+    const newTask: Omit<Task, 'id'> & { status?: string } = {
       title: title.trim(),
       description: description.trim() || undefined,
       priority,
