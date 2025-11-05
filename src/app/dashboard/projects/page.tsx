@@ -279,7 +279,6 @@ export default function ProjectsPage() {
             </div>
           </div>
         </AnimatedContainer>
-      </div>
     </div>
   );
 }
