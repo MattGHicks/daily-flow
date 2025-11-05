@@ -97,27 +97,29 @@ export function Sidebar() {
 
       {/* Quick Create Button */}
       <div className="p-4">
-        <Button
-          className={cn(
-            'w-full gap-2',
-            isCollapsed ? 'px-0 justify-center' : 'justify-start'
-          )}
-          size="lg"
-        >
-          <PlusCircle className="h-5 w-5 shrink-0" />
-          <AnimatePresence>
-            {!isCollapsed && (
-              <motion.span
-                initial={{ opacity: 0, width: 0 }}
-                animate={{ opacity: 1, width: 'auto' }}
-                exit={{ opacity: 0, width: 0 }}
-                transition={{ duration: 0.2 }}
-              >
-                Quick Create
-              </motion.span>
+        <Link href="/dashboard/tasks?create=true">
+          <Button
+            className={cn(
+              'w-full gap-2',
+              isCollapsed ? 'px-0 justify-center' : 'justify-start'
             )}
-          </AnimatePresence>
-        </Button>
+            size="lg"
+          >
+            <PlusCircle className="h-5 w-5 shrink-0" />
+            <AnimatePresence>
+              {!isCollapsed && (
+                <motion.span
+                  initial={{ opacity: 0, width: 0 }}
+                  animate={{ opacity: 1, width: 'auto' }}
+                  exit={{ opacity: 0, width: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  Quick Create
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </Button>
+        </Link>
       </div>
 
       {/* Navigation */}

@@ -1,10 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { KanbanBoard } from '@/components/features/kanban/kanban-board';
-import { Column } from '@/types/kanban';
+import { Column, Task } from '@/types/kanban';
 import { AnimatedContainer } from '@/components/shared/animated-container';
 import { LinkSelectorModal } from '@/components/features/tasks/link-selector-modal';
+import { CreateTaskModal } from '@/components/features/tasks/create-task-modal';
+import { Button } from '@/components/ui/button';
+import { PlusCircle } from 'lucide-react';
 
 // Sample task data - can be linked to Monday.com projects and Redmine threads
 const initialColumns: Column[] = [
@@ -130,13 +134,22 @@ const initialColumns: Column[] = [
 ];
 
 export default function TasksPage() {
+  const searchParams = useSearchParams();
   const [columns, setColumns] = useState<Column[]>(initialColumns);
   const [linkModalOpen, setLinkModalOpen] = useState(false);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
 
   const selectedTask = columns
     .flatMap((col) => col.tasks)
     .find((task) => task.id === selectedTaskId);
+
+  // Auto-open create modal if ?create=true query param is present
+  useEffect(() => {
+    if (searchParams.get('create') === 'true') {
+      setCreateModalOpen(true);
+    }
+  }, [searchParams]);
 
   const handleTaskLinkClick = (taskId: string) => {
     setSelectedTaskId(taskId);
@@ -199,6 +212,22 @@ export default function TasksPage() {
     );
   };
 
+  const handleCreateTask = (taskData: Omit<Task, 'id'>) => {
+    const newTask: Task = {
+      ...taskData,
+      id: `task-${Date.now()}`, // Generate a unique ID
+    };
+
+    // Add the new task to the backlog column
+    setColumns((cols) =>
+      cols.map((col) =>
+        col.id === 'backlog'
+          ? { ...col, tasks: [...col.tasks, newTask] }
+          : col
+      )
+    );
+  };
+
   return (
     <>
       <div className="p-6">
@@ -211,10 +240,14 @@ export default function TasksPage() {
                   Drag and drop tasks between columns to update their status
                 </p>
               </div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>
+              <div className="flex items-center gap-4">
+                <span className="text-sm text-muted-foreground">
                   {columns.reduce((acc, col) => acc + col.tasks.length, 0)} total tasks
                 </span>
+                <Button onClick={() => setCreateModalOpen(true)}>
+                  <PlusCircle className="h-4 w-4 mr-2" />
+                  Create Task
+                </Button>
               </div>
             </div>
           </div>
@@ -236,6 +269,12 @@ export default function TasksPage() {
         onLinkThread={handleLinkThread}
         onUnlinkProject={handleUnlinkProject}
         onUnlinkThread={handleUnlinkThread}
+      />
+
+      <CreateTaskModal
+        open={createModalOpen}
+        onOpenChange={setCreateModalOpen}
+        onCreateTask={handleCreateTask}
       />
     </>
   );
