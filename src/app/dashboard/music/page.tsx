@@ -73,22 +73,25 @@ export default function MusicPage() {
             </CardHeader>
             <CardContent>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {['Deep Focus', 'Coding Zone', 'Creative Flow', 'Chill Vibes'].map(
-                  (playlist, index) => (
-                    <div
-                      key={index}
-                      className="p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer"
-                    >
-                      <div className="h-24 w-full rounded-lg bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center mb-3">
-                        <Music className="h-8 w-8 text-primary" />
-                      </div>
-                      <h4 className="font-medium text-sm">{playlist}</h4>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {Math.floor(Math.random() * 50) + 10} songs
-                      </p>
+                {[
+                  { name: 'Deep Focus', songs: 42 },
+                  { name: 'Coding Zone', songs: 38 },
+                  { name: 'Creative Flow', songs: 25 },
+                  { name: 'Chill Vibes', songs: 51 },
+                ].map((playlist, index) => (
+                  <div
+                    key={index}
+                    className="p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer"
+                  >
+                    <div className="h-24 w-full rounded-lg bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center mb-3">
+                      <Music className="h-8 w-8 text-primary" />
                     </div>
-                  )
-                )}
+                    <h4 className="font-medium text-sm">{playlist.name}</h4>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {playlist.songs} songs
+                    </p>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
