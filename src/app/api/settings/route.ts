@@ -55,7 +55,7 @@ export async function GET() {
     }
 
     // Decrypt sensitive fields before returning
-    const decryptedSettings = decryptFields(user.settings, SENSITIVE_FIELDS);
+    const decryptedSettings = decryptFields(user.settings, [...SENSITIVE_FIELDS]);
 
     return NextResponse.json({
       success: true,
@@ -108,7 +108,7 @@ export async function PUT(request: Request) {
     }
 
     // Encrypt sensitive fields before saving
-    const encryptedData = encryptFields(body, SENSITIVE_FIELDS);
+    const encryptedData = encryptFields(body, [...SENSITIVE_FIELDS]);
 
     // Update or create settings
     const settings = await prisma.userSettings.upsert({
@@ -121,7 +121,7 @@ export async function PUT(request: Request) {
     });
 
     // Decrypt before returning
-    const decryptedSettings = decryptFields(settings, SENSITIVE_FIELDS);
+    const decryptedSettings = decryptFields(settings, [...SENSITIVE_FIELDS]);
 
     return NextResponse.json({
       success: true,
@@ -166,7 +166,7 @@ export async function DELETE(request: Request) {
     });
 
     // Decrypt before returning
-    const decryptedSettings = decryptFields(settings, SENSITIVE_FIELDS);
+    const decryptedSettings = decryptFields(settings, [...SENSITIVE_FIELDS]);
 
     return NextResponse.json({
       success: true,

@@ -17,7 +17,7 @@ The core infrastructure and major integrations are complete. Currently working o
 - ✅ **TypeScript** - Full type safety across the application
 - ✅ **Tailwind CSS + shadcn/ui** - Beautiful, consistent component library
 - ✅ **Framer Motion** - Smooth animations and transitions
-- ✅ **Prisma ORM + SQLite** - Local database for task persistence
+- ✅ **Prisma ORM + PostgreSQL** - Robust database for task persistence
 - ✅ **Dark Theme** - Warm brown/tan color scheme with CSS variables
 
 ### Dashboard Pages
@@ -32,7 +32,7 @@ The core infrastructure and major integrations are complete. Currently working o
 #### 2. Projects & Tasks (`/dashboard/projects` & `/dashboard/tasks`)
 - ✅ **Monday.com API Integration** - Full bidirectional sync with Monday.com boards
 - ✅ **Kanban Board** - Drag-and-drop task management with dnd-kit
-- ✅ **Task Persistence** - Local SQLite database with Prisma ORM
+- ✅ **Task Persistence** - PostgreSQL database with Prisma ORM
 - ✅ **CRUD Operations** - Create, read, update, delete tasks
 - ✅ **Project Filtering** - Filter tasks by Monday.com projects
 - ✅ **Task Details** - Priority, status, project assignment
@@ -117,7 +117,7 @@ The core infrastructure and major integrations are complete. Currently working o
 ### Backend & Database
 - **API Routes**: Next.js Server Actions
 - **ORM**: Prisma 6.x
-- **Database**: SQLite (local) - ready to migrate to PostgreSQL
+- **Database**: PostgreSQL (Docker containerized)
 - **Encryption**: Node crypto module for API key storage
 
 ### External APIs (Integrated)
@@ -136,7 +136,7 @@ The core infrastructure and major integrations are complete. Currently working o
 daily-flow-v2/
 ├── prisma/
 │   ├── schema.prisma              # Database schema
-│   └── dev.db                     # SQLite database
+│   └── migrations/                # PostgreSQL migrations
 ├── src/
 │   ├── app/
 │   │   ├── api/                   # Next.js API routes
@@ -190,6 +190,7 @@ daily-flow-v2/
 ### Prerequisites
 - Node.js 18+
 - npm or yarn
+- Docker (for PostgreSQL)
 
 ### Installation
 
@@ -204,18 +205,23 @@ cd daily-flow-v2
 npm install
 ```
 
-3. **Set up the database**:
+3. **Start PostgreSQL with Docker**:
 ```bash
-npx prisma generate
-npx prisma db push
+docker run --name daily-flow-db -e POSTGRES_PASSWORD=mysecretpassword -e POSTGRES_DB=daily_flow -p 5433:5432 -d postgres:latest
 ```
 
-4. **Run the development server**:
+4. **Set up the database**:
+```bash
+npx prisma generate
+npx prisma migrate deploy
+```
+
+5. **Run the development server**:
 ```bash
 npm run dev
 ```
 
-5. **Open your browser**:
+6. **Open your browser**:
 Navigate to [http://localhost:3000](http://localhost:3000)
 
 ### Configuration
@@ -305,7 +311,8 @@ model UserSettings {
 - `npm run lint` - Run ESLint
 - `npx prisma studio` - Open Prisma database GUI
 - `npx prisma generate` - Generate Prisma client
-- `npx prisma db push` - Push schema changes to database
+- `npx prisma migrate dev` - Create and apply new migration
+- `npx prisma migrate deploy` - Apply pending migrations (production)
 
 **📖 For detailed server management (start, stop, restart, troubleshooting), see [SERVER_MANAGEMENT.md](./SERVER_MANAGEMENT.md)**
 
@@ -346,7 +353,7 @@ model UserSettings {
 - Integrated Monday.com API
 - Integrated Redmine API
 - Added Settings page with encrypted credential storage
-- Implemented task persistence with Prisma + SQLite
+- Implemented task persistence with Prisma + PostgreSQL
 - Added auto-refresh for messages (2-minute interval)
 
 ### v0.1.0 - October 2025

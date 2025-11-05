@@ -55,8 +55,12 @@ export async function GET() {
       );
     }
 
+    // Extract URL and API key after null check for type safety
+    const redmineUrl = settings.redmineUrl;
+    const encryptedApiKey = settings.redmineApiKey;
+
     // Decrypt the API key
-    const apiKey = decrypt(settings.redmineApiKey);
+    const apiKey = decrypt(encryptedApiKey);
     if (!apiKey) {
       return NextResponse.json(
         {
@@ -68,7 +72,7 @@ export async function GET() {
     }
 
     // Get current user info to check who sent messages
-    const currentUser = await getCurrentRedmineUser(settings.redmineUrl, apiKey);
+    const currentUser = await getCurrentRedmineUser(redmineUrl, apiKey);
     if (!currentUser) {
       return NextResponse.json(
         {
@@ -81,7 +85,7 @@ export async function GET() {
 
     // Fetch issues from Redmine (list endpoint - doesn't include journals)
     const { issues, totalCount } = await fetchRedmineIssues(
-      settings.redmineUrl,
+      redmineUrl,
       apiKey,
       {
         assignedToId: 'me', // Fetch issues assigned to the authenticated user
@@ -96,7 +100,7 @@ export async function GET() {
     const { fetchRedmineIssue } = await import('@/lib/api/redmine');
 
     const detailedIssuesPromises = issues.map((issue) =>
-      fetchRedmineIssue(settings.redmineUrl, apiKey, issue.id)
+      fetchRedmineIssue(redmineUrl, apiKey, issue.id)
     );
 
     const detailedIssues = await Promise.all(detailedIssuesPromises);
@@ -131,7 +135,7 @@ export async function GET() {
           redmineProjectId: detailedIssue.project.id,
           redmineStatus: detailedIssue.status.name,
           redmineTracker: detailedIssue.tracker.name,
-          redmineUrl: `${settings.redmineUrl}/issues/${detailedIssue.id}`,
+          redmineUrl: `${redmineUrl}/issues/${detailedIssue.id}`,
           assignedTo: detailedIssue.assigned_to?.name,
           author: detailedIssue.author.name,
           createdOn: detailedIssue.created_on,
@@ -148,7 +152,7 @@ export async function GET() {
       data: messageThreads,
       cached: false,
       totalCount,
-      redmineUrl: settings.redmineUrl,
+      redmineUrl: redmineUrl,
     });
   } catch (error) {
     console.error('Error fetching Redmine issues:', error);

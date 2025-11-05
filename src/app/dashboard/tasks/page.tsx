@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { KanbanBoard } from '@/components/features/kanban/kanban-board';
 import { Column, Task } from '@/types/kanban';
@@ -61,7 +61,7 @@ const initialColumns: Column[] = [
         dueDate: '2025-11-09',
         tags: ['API', 'Messages'],
         project: 'Daily Flow',
-        linkedThreadId: 't1', // Linked to Acme Inc. thread
+        linkedMessageThreadId: 't1', // Linked to Acme Inc. thread
       },
     ],
   },
@@ -79,7 +79,7 @@ const initialColumns: Column[] = [
         tags: ['UI', 'Component'],
         project: 'Daily Flow',
         linkedProjectId: 'p2', // Linked to TechStart Mobile App
-        linkedThreadId: 't2', // Linked to TechStart thread
+        linkedMessageThreadId: 't2', // Linked to TechStart thread
       },
       {
         id: '6',
@@ -133,7 +133,7 @@ const initialColumns: Column[] = [
   },
 ];
 
-export default function TasksPage() {
+function TasksPageContent() {
   const searchParams = useSearchParams();
   const [columns, setColumns] = useState<Column[]>(initialColumns);
   const [linkModalOpen, setLinkModalOpen] = useState(false);
@@ -384,5 +384,13 @@ export default function TasksPage() {
         onCreateTask={handleCreateTask}
       />
     </>
+  );
+}
+
+export default function TasksPage() {
+  return (
+    <Suspense fallback={<div>Loading tasks...</div>}>
+      <TasksPageContent />
+    </Suspense>
   );
 }
