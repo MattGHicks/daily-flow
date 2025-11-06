@@ -1,45 +1,109 @@
 'use client';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { AnimatedContainer } from '@/components/shared/animated-container';
-import { Calendar as CalendarIcon, Clock, Video, MapPin } from 'lucide-react';
+import { CalendarView } from '@/components/features/calendar/calendar-view';
+import { CalendarEvent } from '@/components/features/calendar/event-card';
+import { Calendar as CalendarIcon } from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 
-const upcomingEvents = [
-  {
-    id: 1,
-    title: 'Client Call - Acme Inc.',
-    time: 'Today, 2:00 PM - 3:00 PM',
-    type: 'meeting',
-    location: 'Google Meet',
-    color: 'primary',
-  },
-  {
-    id: 2,
-    title: 'Project Deadline: Website Redesign',
-    time: 'Tomorrow, 5:00 PM',
-    type: 'deadline',
-    location: 'WebCorp Project',
-    color: 'destructive',
-  },
-  {
-    id: 3,
-    title: 'Weekly Planning Session',
-    time: 'Friday, 10:00 AM - 11:00 AM',
-    type: 'meeting',
-    location: 'Zoom',
-    color: 'primary',
-  },
-  {
-    id: 4,
-    title: 'Design Review',
-    time: 'Monday, 3:00 PM - 4:00 PM',
-    type: 'meeting',
-    location: 'Office',
-    color: 'primary',
-  },
-];
+function CalendarPageContent() {
+  const searchParams = useSearchParams();
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-export default function CalendarPage() {
+  // Check authentication status
+  const checkAuth = async () => {
+    try {
+      const response = await fetch('/api/google/calendar/auth', {
+        method: 'POST',
+      });
+      const data = await response.json();
+      setIsAuthenticated(data.authenticated);
+      return data.authenticated;
+    } catch (error) {
+      console.error('Error checking auth:', error);
+      return false;
+    }
+  };
+
+  // Fetch events from Google Calendar
+  const fetchEvents = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const response = await fetch('/api/google/calendar/events');
+      const data = await response.json();
+
+      if (data.success && data.events) {
+        setEvents(data.events);
+      } else if (data.authenticated === false) {
+        setIsAuthenticated(false);
+      } else {
+        setError(data.error || 'Failed to fetch events');
+      }
+    } catch (error) {
+      console.error('Error fetching events:', error);
+      setError('Failed to load calendar events');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle authentication
+  const handleAuthenticate = async () => {
+    try {
+      const response = await fetch('/api/google/calendar/auth');
+      const data = await response.json();
+
+      if (data.success && data.authUrl) {
+        window.location.href = data.authUrl;
+      } else {
+        setError(data.error || 'Failed to start authentication');
+      }
+    } catch (error) {
+      console.error('Error authenticating:', error);
+      setError('Failed to start authentication');
+    }
+  };
+
+  useEffect(() => {
+    const init = async () => {
+      // Check for success/error params from OAuth callback
+      const success = searchParams.get('success');
+      const error = searchParams.get('error');
+
+      if (success === 'true') {
+        // Authentication successful
+        setIsAuthenticated(true);
+        // Clear the query params
+        window.history.replaceState({}, '', '/dashboard/calendar');
+      } else if (error) {
+        setError('Authentication failed: ' + error);
+        window.history.replaceState({}, '', '/dashboard/calendar');
+      }
+
+      // Check authentication and fetch events
+      const isAuth = await checkAuth();
+      if (isAuth) {
+        await fetchEvents();
+      } else {
+        setIsLoading(false);
+      }
+    };
+
+    init();
+  }, [searchParams]);
+
+  const handleRefresh = async () => {
+    await fetchEvents();
+  };
+
   return (
     <div className="p-6 space-y-6">
       <div className="mb-6">
@@ -50,91 +114,93 @@ export default function CalendarPage() {
           <div>
             <h2 className="text-2xl font-bold">Calendar</h2>
             <p className="text-sm text-muted-foreground">
-              View and manage your schedule
+              View your Google Calendar events (Read-only)
             </p>
           </div>
         </div>
       </div>
 
       <AnimatedContainer animation="slideUp">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CalendarIcon className="h-5 w-5" />
-                Upcoming Events
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {upcomingEvents.map((event, index) => (
-                  <AnimatedContainer
-                    key={event.id}
-                    animation="slideUp"
-                    delay={index * 0.1}
-                  >
-                    <div className="flex items-start gap-4 p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
-                      <div
-                        className={`mt-1 h-10 w-10 rounded-lg flex items-center justify-center ${
-                          event.type === 'deadline'
-                            ? 'bg-destructive/10 text-destructive'
-                            : 'bg-primary/10 text-primary'
-                        }`}
-                      >
-                        {event.type === 'deadline' ? (
-                          <Clock className="h-5 w-5" />
-                        ) : (
-                          <Video className="h-5 w-5" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-medium text-sm">{event.title}</h4>
-                        <div className="flex items-center gap-4 mt-1.5 text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {event.time}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <MapPin className="h-3 w-3" />
-                            {event.location}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </AnimatedContainer>
-                ))}
-              </div>
-            </CardContent>
+        {error && (
+          <Card className="p-4 border-destructive/50 bg-destructive/10 mb-4">
+            <p className="text-sm text-destructive">{error}</p>
           </Card>
-        </AnimatedContainer>
+        )}
 
+        {isLoading && isAuthenticated ? (
+          <div className="space-y-4">
+            <Skeleton className="h-12 w-full" />
+            <div className="grid grid-cols-7 gap-2">
+              {Array.from({ length: 35 }).map((_, i) => (
+                <Skeleton key={i} className="h-20 w-full" />
+              ))}
+            </div>
+          </div>
+        ) : (
+          <CalendarView
+            events={events}
+            isLoading={isLoading}
+            isAuthenticated={isAuthenticated}
+            onRefresh={handleRefresh}
+            onAuthenticate={handleAuthenticate}
+          />
+        )}
+      </AnimatedContainer>
+
+      {/* Statistics Card */}
+      {isAuthenticated && events.length > 0 && (
         <AnimatedContainer animation="slideUp" delay={0.2}>
-          <Card className="border-primary/20">
-            <CardHeader>
-              <CardTitle>Google Calendar Integration</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Connect your Google Calendar to automatically sync events and manage your
-                  schedule directly from this dashboard.
-                </p>
-                <div className="flex items-center gap-4">
-                  <div className="flex-1 p-4 rounded-lg bg-muted/50">
-                    <p className="text-xs text-muted-foreground mb-1">Status</p>
-                    <p className="text-sm font-medium">Ready to Connect</p>
-                  </div>
-                  <div className="flex-1 p-4 rounded-lg bg-muted/50">
-                    <p className="text-xs text-muted-foreground mb-1">Sync Type</p>
-                    <p className="text-sm font-medium">Bi-directional</p>
-                  </div>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Google Calendar API integration will be implemented in the next phase.
-                </p>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Card className="p-4">
+              <div className="text-2xl font-bold">{events.length}</div>
+              <div className="text-xs text-muted-foreground">Total Events</div>
+            </Card>
+
+            <Card className="p-4">
+              <div className="text-2xl font-bold">
+                {events.filter(e => {
+                  const eventDate = new Date(e.start);
+                  const today = new Date();
+                  return eventDate.toDateString() === today.toDateString();
+                }).length}
               </div>
-            </CardContent>
-          </Card>
+              <div className="text-xs text-muted-foreground">Today</div>
+            </Card>
+
+            <Card className="p-4">
+              <div className="text-2xl font-bold">
+                {events.filter(e => {
+                  const eventDate = new Date(e.start);
+                  const today = new Date();
+                  const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+                  return eventDate >= today && eventDate <= nextWeek;
+                }).length}
+              </div>
+              <div className="text-xs text-muted-foreground">This Week</div>
+            </Card>
+
+            <Card className="p-4">
+              <div className="text-2xl font-bold">
+                {events.filter(e => e.conferenceData).length}
+              </div>
+              <div className="text-xs text-muted-foreground">Video Meetings</div>
+            </Card>
+          </div>
         </AnimatedContainer>
+      )}
+    </div>
+  );
+}
+
+export default function CalendarPage() {
+  return (
+    <Suspense fallback={
+      <div className="p-6">
+        <Skeleton className="h-12 w-full mb-4" />
+        <Skeleton className="h-96 w-full" />
       </div>
+    }>
+      <CalendarPageContent />
+    </Suspense>
   );
 }

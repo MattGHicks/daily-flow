@@ -14,14 +14,16 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  password  String?  // For future auth implementation
-  settings  UserSettings?
-  tasks     Task[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String      @id @default(cuid())
+  email      String      @unique
+  name       String?
+  password   String?     // For future auth implementation
+  settings   UserSettings?
+  tasks      Task[]
+  projects   Project[]
+  taskStages TaskStage[]
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
 }
 
 model UserSettings {
@@ -33,8 +35,10 @@ model UserSettings {
   redmineUrl           String?
   googleClientId       String?
   googleClientSecret   String?
+  googleRefreshToken   String? // Encrypted refresh token for Google OAuth
   spotifyClientId      String?
   spotifyClientSecret  String?
+  spotifyRefreshToken  String? // Encrypted refresh token for Spotify OAuth
   // Preferences
   theme                String  @default("dark")
   compactMode          Boolean @default(false)
@@ -51,20 +55,74 @@ model Task {
   title                 String
   description           String?
   priority              String    // low, medium, high
-  status                String    // backlog, todo, in-progress, review, done
+  status                String    // References TaskStage.key
   order                 Int       @default(0) // Position within the column
   assignee              String?
   dueDate               DateTime?
+  deadline              DateTime? // Alias for dueDate
   tags                  String[]
   project               String?
   linkedProjectId       String?   // Link to Monday.com project
+  linkedProjectName     String?   // Monday.com project name
+  linkedProjectUrl      String?   // Monday.com project URL
   linkedMessageThreadId String?   // Link to Redmine thread
+  linkedMessageThreadName String? // Redmine thread name
+  linkedMessageThreadUrl String?  // Redmine thread URL
+  stageId               String?   // Link to custom TaskStage
   // Relations
   user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stage                 TaskStage? @relation(fields: [stageId], references: [id], onDelete: SetNull)
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
   @@index([userId])
   @@index([status])
   @@index([priority])
+  @@index([stageId])
+}
+
+model Project {
+  id            String    @id @default(cuid())
+  mondayId      String    @unique  // Monday.com item ID
+  userId        String
+  name          String
+  status        String?
+  assignee      String?
+  board         String
+  boardId       BigInt    // Changed to BigInt for large Monday.com IDs
+  groupId       String?
+  groupName     String?
+  color         String?
+  columnValues  Json?     // Store all column values as JSON for flexibility
+  lastSyncedAt  DateTime  @default(now())
+  // Relations
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([mondayId])
+  @@index([status])
+  @@index([board])
+}
+
+model TaskStage {
+  id          String    @id @default(cuid())
+  userId      String
+  key         String    // Unique key like 'backlog', 'todo', etc.
+  name        String    // Display name like 'Backlog', 'To Do', etc.
+  color       String?   // Hex color for the stage
+  icon        String?   // Emoji or icon identifier
+  order       Int       // Order of the stage in the board
+  isDefault   Boolean   @default(false) // Whether this is a default stage
+  canDelete   Boolean   @default(true)  // Whether users can delete this stage
+  // Relations
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks       Task[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([userId, key])
+  @@index([userId])
+  @@index([order])
 }

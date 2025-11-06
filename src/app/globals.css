@@ -72,3 +72,26 @@
     @apply bg-muted-foreground;
   }
 }
+
+/* Move Next.js error overlay to bottom-right */
+@layer base {
+  /* Next.js error overlay container */
+  [data-nextjs-dialog-left] {
+    left: auto !important;
+    right: 1rem !important;
+  }
+
+  /* Alternative selectors for different Next.js versions */
+  nextjs-portal {
+    position: fixed !important;
+    left: auto !important;
+    right: 1rem !important;
+    bottom: 1rem !important;
+  }
+
+  /* The floating debugger button */
+  [data-nextjs-toast] {
+    left: auto !important;
+    right: 1rem !important;
+  }
+}

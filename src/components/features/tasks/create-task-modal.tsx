@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -26,18 +26,28 @@ interface CreateTaskModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreateTask: (task: Omit<Task, 'id'>) => void;
+  defaultStatus?: string;
+  stages?: { id: string; name: string; key: string }[];
 }
 
 export function CreateTaskModal({
   open,
   onOpenChange,
   onCreateTask,
+  defaultStatus = 'backlog',
+  stages = [],
 }: CreateTaskModalProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium');
+  const [status, setStatus] = useState(defaultStatus);
   const [dueDate, setDueDate] = useState('');
   const [tags, setTags] = useState('');
+
+  // Update status when defaultStatus changes (when opening modal from different columns)
+  useEffect(() => {
+    setStatus(defaultStatus);
+  }, [defaultStatus, open]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,6 +58,7 @@ export function CreateTaskModal({
       title: title.trim(),
       description: description.trim() || undefined,
       priority,
+      status,
       assignee: 'Matt',
       dueDate: dueDate || undefined,
       tags: tags
@@ -63,6 +74,7 @@ export function CreateTaskModal({
     setTitle('');
     setDescription('');
     setPriority('medium');
+    setStatus(defaultStatus);
     setDueDate('');
     setTags('');
     onOpenChange(false);
@@ -75,7 +87,12 @@ export function CreateTaskModal({
           <DialogHeader>
             <DialogTitle>Create New Task</DialogTitle>
             <DialogDescription>
-              Add a new task to your backlog. You can move it to other columns later.
+              {stages.length > 0 && (
+                <>Add a new task to {stages.find(s => s.key === status)?.name || status}.</>
+              )}
+              {stages.length === 0 && (
+                <>Add a new task to {status}.</>
+              )}
             </DialogDescription>
           </DialogHeader>
 

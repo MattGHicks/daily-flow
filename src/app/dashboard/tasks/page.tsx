@@ -2,13 +2,15 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { KanbanBoard } from '@/components/features/kanban/kanban-board';
-import { Column, Task } from '@/types/kanban';
+import { KanbanBoardImproved } from '@/components/features/kanban/kanban-board-improved';
+import { Column, Task, TaskStage } from '@/types/kanban';
 import { AnimatedContainer } from '@/components/shared/animated-container';
 import { LinkSelectorModal } from '@/components/features/tasks/link-selector-modal';
 import { CreateTaskModal } from '@/components/features/tasks/create-task-modal';
+import { EditTaskModal } from '@/components/features/tasks/edit-task-modal';
+import { StageManager } from '@/components/features/tasks/stage-manager';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, ListTodo } from 'lucide-react';
+import { PlusCircle, ListTodo, Settings2 } from 'lucide-react';
 
 // Sample task data - can be linked to Monday.com projects and Redmine threads
 const initialColumns: Column[] = [
@@ -50,7 +52,9 @@ const initialColumns: Column[] = [
         dueDate: '2025-11-08',
         tags: ['API', 'Calendar'],
         project: 'Daily Flow',
-        linkedProjectId: 'p1', // Linked to Acme Website Redesign
+        linkedProjectId: 'p1',
+        linkedProjectName: 'Acme Website Redesign',
+        linkedProjectUrl: 'https://revize.monday.com/boards/1234567890/views/195126247/pulses/p1',
       },
       {
         id: '4',
@@ -61,7 +65,9 @@ const initialColumns: Column[] = [
         dueDate: '2025-11-09',
         tags: ['API', 'Messages'],
         project: 'Daily Flow',
-        linkedMessageThreadId: 't1', // Linked to Acme Inc. thread
+        linkedMessageThreadId: 't1',
+        linkedMessageThreadName: 'Acme Inc. - Website Updates',
+        linkedMessageThreadUrl: 'https://redmine.revize.com/issues/t1',
       },
     ],
   },
@@ -78,8 +84,12 @@ const initialColumns: Column[] = [
         dueDate: '2025-11-06',
         tags: ['UI', 'Component'],
         project: 'Daily Flow',
-        linkedProjectId: 'p2', // Linked to TechStart Mobile App
-        linkedMessageThreadId: 't2', // Linked to TechStart thread
+        linkedProjectId: 'p2',
+        linkedProjectName: 'TechStart Mobile App',
+        linkedProjectUrl: 'https://revize.monday.com/boards/1234567890/views/195126247/pulses/p2',
+        linkedMessageThreadId: 't2',
+        linkedMessageThreadName: 'TechStart - App Development',
+        linkedMessageThreadUrl: 'https://redmine.revize.com/issues/t2',
       },
       {
         id: '6',
@@ -135,10 +145,15 @@ const initialColumns: Column[] = [
 
 function TasksPageContent() {
   const searchParams = useSearchParams();
-  const [columns, setColumns] = useState<Column[]>(initialColumns);
+  const [columns, setColumns] = useState<Column[]>([]);
+  const [stages, setStages] = useState<TaskStage[]>([]);
   const [linkModalOpen, setLinkModalOpen] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [createModalDefaultStatus, setCreateModalDefaultStatus] = useState('backlog');
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [stageManagerOpen, setStageManagerOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -146,44 +161,75 @@ function TasksPageContent() {
     .flatMap((col) => col.tasks)
     .find((task) => task.id === selectedTaskId);
 
-  // Fetch tasks from database on mount
+  // Fetch stages from database
+  const fetchStages = async () => {
+    try {
+      const response = await fetch('/api/task-stages');
+      const result = await response.json();
+
+      if (result.success) {
+        setStages(result.data);
+        return result.data;
+      }
+      return [];
+    } catch (error) {
+      console.error('Error fetching stages:', error);
+      return [];
+    }
+  };
+
+  // Fetch tasks and stages from database on mount
   useEffect(() => {
-    const fetchTasks = async () => {
+    const loadData = async () => {
       try {
-        const response = await fetch('/api/tasks');
-        const result = await response.json();
+        // Fetch stages first
+        const stageData = await fetchStages();
 
-        if (result.success) {
-          // Convert flat task list to column structure
-          const tasksByStatus: Record<string, Task[]> = {
-            backlog: [],
-            todo: [],
-            'in-progress': [],
-            review: [],
-            done: [],
-          };
+        // Then fetch tasks
+        const tasksResponse = await fetch('/api/tasks');
+        const tasksResult = await tasksResponse.json();
 
-          result.data.forEach((task: any) => {
-            if (tasksByStatus[task.status]) {
-              tasksByStatus[task.status].push(task);
+        if (tasksResult.success && stageData.length > 0) {
+          // Group tasks by status/stage
+          const tasksByStatus: Record<string, Task[]> = {};
+
+          // Initialize with empty arrays for each stage
+          stageData.forEach((stage: TaskStage) => {
+            tasksByStatus[stage.key] = [];
+          });
+
+          // Sort tasks into their stages
+          tasksResult.data.forEach((task: any) => {
+            const stageKey = task.status || 'backlog';
+            if (tasksByStatus[stageKey]) {
+              tasksByStatus[stageKey].push(task);
+            } else {
+              // If stage doesn't exist, put in backlog
+              tasksByStatus['backlog']?.push(task);
             }
           });
 
-          const loadedColumns = initialColumns.map((col) => ({
-            ...col,
-            tasks: tasksByStatus[col.id] || [],
+          // Convert stages to columns with tasks
+          const loadedColumns: Column[] = stageData.map((stage: TaskStage) => ({
+            id: stage.key,
+            key: stage.key,
+            title: stage.name,
+            color: stage.color,
+            icon: stage.icon,
+            tasks: tasksByStatus[stage.key] || [],
+            canDelete: stage.canDelete,
           }));
 
           setColumns(loadedColumns);
         }
       } catch (error) {
-        console.error('Error fetching tasks:', error);
+        console.error('Error loading data:', error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchTasks();
+    loadData();
   }, []);
 
   // Save tasks to database whenever columns change (debounced)
@@ -207,7 +253,11 @@ function TasksPageContent() {
             tags: task.tags,
             project: task.project,
             linkedProjectId: task.linkedProjectId,
+            linkedProjectName: task.linkedProjectName,
+            linkedProjectUrl: task.linkedProjectUrl,
             linkedMessageThreadId: task.linkedMessageThreadId,
+            linkedMessageThreadName: task.linkedMessageThreadName,
+            linkedMessageThreadUrl: task.linkedMessageThreadUrl,
           }))
         );
 
@@ -238,32 +288,90 @@ function TasksPageContent() {
     setLinkModalOpen(true);
   };
 
-  const handleLinkProject = (projectId: string) => {
+  const handleLinkProject = async (projectId: string) => {
     if (!selectedTaskId) return;
 
-    setColumns((cols) =>
-      cols.map((col) => ({
-        ...col,
-        tasks: col.tasks.map((task) =>
-          task.id === selectedTaskId ? { ...task, linkedProjectId: projectId } : task
-        ),
-      }))
-    );
+    try {
+      // Fetch project details to get the name and URL
+      const response = await fetch('/api/monday/projects');
+      const result = await response.json();
+
+      if (result.success) {
+        const project = result.data.find((p: any) => p.id === projectId);
+        if (project) {
+          setColumns((cols) =>
+            cols.map((col) => ({
+              ...col,
+              tasks: col.tasks.map((task) =>
+                task.id === selectedTaskId
+                  ? {
+                      ...task,
+                      linkedProjectId: projectId,
+                      linkedProjectName: project.name,
+                      linkedProjectUrl: project.mondayUrl
+                    }
+                  : task
+              ),
+            }))
+          );
+        }
+      }
+    } catch (error) {
+      console.error('Error linking project:', error);
+      // Fallback to just setting the ID
+      setColumns((cols) =>
+        cols.map((col) => ({
+          ...col,
+          tasks: col.tasks.map((task) =>
+            task.id === selectedTaskId ? { ...task, linkedProjectId: projectId } : task
+          ),
+        }))
+      );
+    }
   };
 
-  const handleLinkThread = (threadId: string) => {
+  const handleLinkThread = async (threadId: string) => {
     if (!selectedTaskId) return;
 
-    setColumns((cols) =>
-      cols.map((col) => ({
-        ...col,
-        tasks: col.tasks.map((task) =>
-          task.id === selectedTaskId
-            ? { ...task, linkedMessageThreadId: threadId }
-            : task
-        ),
-      }))
-    );
+    try {
+      // Fetch thread details to get the name and URL
+      const response = await fetch('/api/redmine/issues');
+      const result = await response.json();
+
+      if (result.success) {
+        const thread = result.data.find((t: any) => t.id === threadId);
+        if (thread) {
+          setColumns((cols) =>
+            cols.map((col) => ({
+              ...col,
+              tasks: col.tasks.map((task) =>
+                task.id === selectedTaskId
+                  ? {
+                      ...task,
+                      linkedMessageThreadId: threadId,
+                      linkedMessageThreadName: `${thread.client} - ${thread.subject}`,
+                      linkedMessageThreadUrl: thread.redmineUrl
+                    }
+                  : task
+              ),
+            }))
+          );
+        }
+      }
+    } catch (error) {
+      console.error('Error linking thread:', error);
+      // Fallback to just setting the ID
+      setColumns((cols) =>
+        cols.map((col) => ({
+          ...col,
+          tasks: col.tasks.map((task) =>
+            task.id === selectedTaskId
+              ? { ...task, linkedMessageThreadId: threadId }
+              : task
+          ),
+        }))
+      );
+    }
   };
 
   const handleUnlinkProject = () => {
@@ -273,7 +381,14 @@ function TasksPageContent() {
       cols.map((col) => ({
         ...col,
         tasks: col.tasks.map((task) =>
-          task.id === selectedTaskId ? { ...task, linkedProjectId: undefined } : task
+          task.id === selectedTaskId
+            ? {
+                ...task,
+                linkedProjectId: undefined,
+                linkedProjectName: undefined,
+                linkedProjectUrl: undefined
+              }
+            : task
         ),
       }))
     );
@@ -287,7 +402,12 @@ function TasksPageContent() {
         ...col,
         tasks: col.tasks.map((task) =>
           task.id === selectedTaskId
-            ? { ...task, linkedMessageThreadId: undefined }
+            ? {
+                ...task,
+                linkedMessageThreadId: undefined,
+                linkedMessageThreadName: undefined,
+                linkedMessageThreadUrl: undefined
+              }
             : task
         ),
       }))
@@ -321,6 +441,29 @@ function TasksPageContent() {
     }
   };
 
+  const handleTaskEditClick = (task: Task) => {
+    setEditingTask(task);
+    setEditModalOpen(true);
+  };
+
+  const handleAddTaskFromColumn = (columnId: string) => {
+    setCreateModalDefaultStatus(columnId);
+    setCreateModalOpen(true);
+  };
+
+  const handleUpdateTask = (taskId: string, updatedData: Partial<Task>) => {
+    setColumns((cols) =>
+      cols.map((col) => ({
+        ...col,
+        tasks: col.tasks.map((task) =>
+          task.id === taskId ? { ...task, ...updatedData } : task
+        ),
+      }))
+    );
+    setEditModalOpen(false);
+    setEditingTask(null);
+  };
+
   return (
     <>
       <div className="p-6">
@@ -345,6 +488,13 @@ function TasksPageContent() {
                 <span className="text-sm text-muted-foreground">
                   {columns.reduce((acc, col) => acc + col.tasks.length, 0)} total tasks
                 </span>
+                <Button
+                  variant="outline"
+                  onClick={() => setStageManagerOpen(true)}
+                >
+                  <Settings2 className="h-4 w-4 mr-2" />
+                  Manage Stages
+                </Button>
                 <Button onClick={() => setCreateModalOpen(true)}>
                   <PlusCircle className="h-4 w-4 mr-2" />
                   Create Task
@@ -358,10 +508,12 @@ function TasksPageContent() {
               <div className="text-sm text-muted-foreground">Loading tasks...</div>
             </div>
           ) : (
-            <KanbanBoard
+            <KanbanBoardImproved
               columns={columns}
               onColumnsChange={setColumns}
               onTaskLinkClick={handleTaskLinkClick}
+              onTaskEditClick={handleTaskEditClick}
+              onAddTaskFromColumn={handleAddTaskFromColumn}
             />
           )}
         </AnimatedContainer>
@@ -382,6 +534,62 @@ function TasksPageContent() {
         open={createModalOpen}
         onOpenChange={setCreateModalOpen}
         onCreateTask={handleCreateTask}
+        defaultStatus={createModalDefaultStatus}
+        stages={stages}
+      />
+
+      <EditTaskModal
+        open={editModalOpen}
+        onOpenChange={setEditModalOpen}
+        task={editingTask}
+        onUpdateTask={handleUpdateTask}
+      />
+
+      <StageManager
+        open={stageManagerOpen}
+        onOpenChange={setStageManagerOpen}
+        stages={stages}
+        onRefresh={async () => {
+          await fetchStages();
+          // Reload tasks and stages
+          const stageData = await fetchStages();
+          const tasksResponse = await fetch('/api/tasks');
+          const tasksResult = await tasksResponse.json();
+
+          if (tasksResult.success && stageData.length > 0) {
+            // Group tasks by status/stage
+            const tasksByStatus: Record<string, Task[]> = {};
+
+            // Initialize with empty arrays for each stage
+            stageData.forEach((stage: TaskStage) => {
+              tasksByStatus[stage.key] = [];
+            });
+
+            // Sort tasks into their stages
+            tasksResult.data.forEach((task: any) => {
+              const stageKey = task.status || 'backlog';
+              if (tasksByStatus[stageKey]) {
+                tasksByStatus[stageKey].push(task);
+              } else {
+                // If stage doesn't exist, put in backlog
+                tasksByStatus['backlog']?.push(task);
+              }
+            });
+
+            // Convert stages to columns with tasks
+            const loadedColumns: Column[] = stageData.map((stage: TaskStage) => ({
+              id: stage.key,
+              key: stage.key,
+              title: stage.name,
+              color: stage.color,
+              icon: stage.icon,
+              tasks: tasksByStatus[stage.key] || [],
+              canDelete: stage.canDelete,
+            }));
+
+            setColumns(loadedColumns);
+          }
+        }}
       />
     </>
   );

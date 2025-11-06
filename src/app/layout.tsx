@@ -5,8 +5,13 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
 export const metadata: Metadata = {
-  title: 'Daily Flow - Workflow Dashboard',
+  title: 'Daily Flow',
   description: 'Unified dashboard for managing projects, tasks, and client communications',
+  icons: {
+    icon: '/favicon.svg',
+    shortcut: '/favicon.svg',
+    apple: '/favicon.svg',
+  },
 };
 
 export default function RootLayout({

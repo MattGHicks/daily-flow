@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { Logo } from '@/components/shared/logo';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -68,7 +69,7 @@ export function Sidebar() {
       className="relative flex h-screen flex-col bg-card border-r border-border"
     >
       {/* Logo / Brand */}
-      <div className="flex h-16 items-center justify-between px-6 border-b border-border">
+      <div className="flex h-16 items-center justify-center px-6 border-b border-border">
         <AnimatePresence mode="wait">
           {!isCollapsed ? (
             <motion.div
@@ -77,19 +78,9 @@ export function Sidebar() {
               animate={{ opacity: 1 }}
               exit={{ opacity: hasLoadedFromStorage ? 0 : 1 }}
               transition={{ duration: hasLoadedFromStorage ? 0.2 : 0 }}
-              className="flex items-center gap-2"
+              className="w-full"
             >
-              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/60">
-                <span className="text-primary-foreground font-bold text-lg">DF</span>
-              </div>
-              <div>
-                <h1 className="text-lg font-bold tracking-tight leading-none">
-                  Daily Flow
-                </h1>
-                <p className="text-[10px] text-muted-foreground leading-none mt-0.5">
-                  Workflow Dashboard
-                </p>
-              </div>
+              <Logo collapsed={false} animated={hasLoadedFromStorage} />
             </motion.div>
           ) : (
             <motion.div
@@ -98,9 +89,8 @@ export function Sidebar() {
               animate={{ opacity: 1 }}
               exit={{ opacity: hasLoadedFromStorage ? 0 : 1 }}
               transition={{ duration: hasLoadedFromStorage ? 0.2 : 0 }}
-              className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/60 mx-auto"
             >
-              <span className="text-primary-foreground font-bold text-lg">DF</span>
+              <Logo collapsed={true} animated={hasLoadedFromStorage} />
             </motion.div>
           )}
         </AnimatePresence>

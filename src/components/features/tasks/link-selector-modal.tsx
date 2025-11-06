@@ -11,10 +11,9 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { mockMessageThreads } from '@/lib/data/mock-messages';
 import { Project } from '@/types/project';
 import { MessageThread } from '@/types/message';
-import { Search, FolderKanban, MessageSquare, X, Check, Loader2 } from 'lucide-react';
+import { Search, FolderKanban, MessageSquare, X, Check, Loader2, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getMondayColorClasses } from '@/lib/monday-colors';
 
@@ -42,12 +41,16 @@ export function LinkSelectorModal({
   const [projectSearch, setProjectSearch] = useState('');
   const [threadSearch, setThreadSearch] = useState('');
   const [projects, setProjects] = useState<Project[]>([]);
+  const [messageThreads, setMessageThreads] = useState<MessageThread[]>([]);
   const [isLoadingProjects, setIsLoadingProjects] = useState(false);
+  const [isLoadingThreads, setIsLoadingThreads] = useState(false);
+  const [threadsError, setThreadsError] = useState<string | null>(null);
 
-  // Fetch Monday.com projects when modal opens
+  // Fetch Monday.com projects and Redmine issues when modal opens
   useEffect(() => {
     if (open) {
       fetchProjects();
+      fetchMessageThreads();
     }
   }, [open]);
 
@@ -66,18 +69,40 @@ export function LinkSelectorModal({
     }
   };
 
+  const fetchMessageThreads = async () => {
+    setIsLoadingThreads(true);
+    setThreadsError(null);
+    try {
+      const response = await fetch('/api/redmine/issues');
+      const result = await response.json();
+      if (result.success) {
+        setMessageThreads(result.data || []);
+      } else {
+        setThreadsError(result.error || 'Failed to fetch message threads');
+        if (result.needsConfiguration) {
+          setThreadsError('Redmine not configured. Please add your Redmine URL and API key in Settings.');
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching message threads:', error);
+      setThreadsError('Failed to connect to Redmine. Please check your settings.');
+    } finally {
+      setIsLoadingThreads(false);
+    }
+  };
+
   const filteredProjects = projects.filter((project) =>
     project.title.toLowerCase().includes(projectSearch.toLowerCase())
   );
 
-  const filteredThreads = mockMessageThreads.filter((thread) =>
+  const filteredThreads = messageThreads.filter((thread) =>
     (thread.client + ' ' + thread.subject)
       .toLowerCase()
       .includes(threadSearch.toLowerCase())
   );
 
   const currentProject = projects.find((p) => p.id === currentProjectId);
-  const currentThread = mockMessageThreads.find((t) => t.id === currentThreadId);
+  const currentThread = messageThreads.find((t) => t.id === currentThreadId);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -212,6 +237,7 @@ export function LinkSelectorModal({
                 value={threadSearch}
                 onChange={(e) => setThreadSearch(e.target.value)}
                 className="pl-9"
+                disabled={isLoadingThreads || !!threadsError}
               />
             </div>
 
@@ -238,51 +264,79 @@ export function LinkSelectorModal({
               </div>
             )}
 
-            {/* Thread List */}
-            <div className="flex-1 overflow-y-auto space-y-2 pr-2 scrollbar-thin">
-              {filteredThreads.map((thread) => {
-                const isLinked = thread.id === currentThreadId;
-                return (
-                  <button
-                    key={thread.id}
-                    onClick={() => {
-                      if (!isLinked) {
-                        onLinkThread(thread.id);
-                        onOpenChange(false);
-                      }
-                    }}
-                    className={cn(
-                      'w-full text-left p-3 rounded-lg border transition-colors',
-                      isLinked
-                        ? 'bg-primary/10 border-primary'
-                        : 'bg-card border-border hover:bg-muted'
-                    )}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <p className="font-medium text-sm">{thread.client}</p>
-                          {thread.unread && (
-                            <span className="h-2 w-2 rounded-full bg-primary" />
-                          )}
-                        </div>
-                        <p className="text-xs text-muted-foreground line-clamp-1">
-                          {thread.subject}
-                        </p>
-                      </div>
-                      {isLinked && (
-                        <Check className="h-5 w-5 text-primary shrink-0" />
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
-              {filteredThreads.length === 0 && (
-                <div className="text-center py-8 text-sm text-muted-foreground">
-                  No message threads found
+            {/* Loading State */}
+            {isLoadingThreads && (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            )}
+
+            {/* Error State */}
+            {threadsError && (
+              <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/20">
+                <div className="flex items-center gap-2 mb-1">
+                  <AlertCircle className="h-4 w-4 text-destructive" />
+                  <p className="font-medium text-sm">Unable to load message threads</p>
                 </div>
-              )}
-            </div>
+                <p className="text-xs text-muted-foreground">{threadsError}</p>
+              </div>
+            )}
+
+            {/* Thread List */}
+            {!isLoadingThreads && !threadsError && (
+              <div className="flex-1 overflow-y-auto space-y-2 pr-2 scrollbar-thin">
+                {filteredThreads.map((thread) => {
+                  const isLinked = thread.id === currentThreadId;
+                  return (
+                    <button
+                      key={thread.id}
+                      onClick={() => {
+                        if (!isLinked) {
+                          onLinkThread(thread.id);
+                          onOpenChange(false);
+                        }
+                      }}
+                      className={cn(
+                        'w-full text-left p-3 rounded-lg border transition-colors',
+                        isLinked
+                          ? 'bg-primary/10 border-primary'
+                          : 'bg-card border-border hover:bg-muted'
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="font-medium text-sm">{thread.client}</p>
+                            {thread.unread && (
+                              <span className="h-2 w-2 rounded-full bg-primary" />
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground line-clamp-1">
+                            {thread.subject}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {thread.timestamp}
+                          </p>
+                        </div>
+                        {isLinked && (
+                          <Check className="h-5 w-5 text-primary shrink-0" />
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+                {filteredThreads.length === 0 && messageThreads.length === 0 && (
+                  <div className="text-center py-8 text-sm text-muted-foreground">
+                    No message threads available
+                  </div>
+                )}
+                {filteredThreads.length === 0 && messageThreads.length > 0 && (
+                  <div className="text-center py-8 text-sm text-muted-foreground">
+                    No message threads found matching your search
+                  </div>
+                )}
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </DialogContent>

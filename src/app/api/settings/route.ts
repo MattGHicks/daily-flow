@@ -107,8 +107,15 @@ export async function PUT(request: Request) {
       });
     }
 
+    // Trim whitespace from Google credentials to prevent OAuth issues
+    const cleanedBody = {
+      ...body,
+      googleClientId: body.googleClientId?.trim() || body.googleClientId,
+      googleClientSecret: body.googleClientSecret?.trim() || body.googleClientSecret,
+    };
+
     // Encrypt sensitive fields before saving
-    const encryptedData = encryptFields(body, [...SENSITIVE_FIELDS]);
+    const encryptedData = encryptFields(cleanedBody, [...SENSITIVE_FIELDS]);
 
     // Update or create settings
     const settings = await prisma.userSettings.upsert({

@@ -113,10 +113,9 @@ export async function GET() {
         const lastMessageSentByMe = wasLastMessageByUser(detailedIssue, currentUser.id);
 
         // Issue needs response if:
-        // 1. It's open/unread
-        // 2. Last message was NOT sent by me
-        // 3. It's assigned to me or I'm involved
-        const needsResponse = isIssueUnread(detailedIssue) && !lastMessageSentByMe;
+        // The last message was NOT sent by the current user
+        // This means someone else (client, team member, etc.) sent the last message
+        const needsResponse = !lastMessageSentByMe;
 
         return {
           id: detailedIssue.id.toString(),

@@ -51,7 +51,11 @@ export async function POST(request: Request) {
       tags,
       project,
       linkedProjectId,
+      linkedProjectName,
+      linkedProjectUrl,
       linkedMessageThreadId,
+      linkedMessageThreadName,
+      linkedMessageThreadUrl,
     } = body;
 
     // Get the highest order number in the status column
@@ -78,7 +82,11 @@ export async function POST(request: Request) {
         tags: tags || [],
         project,
         linkedProjectId,
+        linkedProjectName,
+        linkedProjectUrl,
         linkedMessageThreadId,
+        linkedMessageThreadName,
+        linkedMessageThreadUrl,
       },
     });
 
