@@ -27,10 +27,11 @@ interface KanbanBoardProps {
   onColumnsChange: (columns: Column[]) => void;
   onTaskLinkClick?: (taskId: string) => void;
   onTaskEditClick?: (task: Task) => void;
+  onTaskDeleteClick?: (task: Task) => void;
   onAddTaskFromColumn?: (columnId: string) => void;
 }
 
-export function KanbanBoardImproved({ columns, onColumnsChange, onTaskLinkClick, onTaskEditClick, onAddTaskFromColumn }: KanbanBoardProps) {
+export function KanbanBoardImproved({ columns, onColumnsChange, onTaskLinkClick, onTaskEditClick, onTaskDeleteClick, onAddTaskFromColumn }: KanbanBoardProps) {
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -321,6 +322,7 @@ export function KanbanBoardImproved({ columns, onColumnsChange, onTaskLinkClick,
                 column={column}
                 onTaskLinkClick={onTaskLinkClick}
                 onTaskEditClick={onTaskEditClick}
+                onTaskDeleteClick={onTaskDeleteClick}
                 onAddTask={onAddTaskFromColumn ? () => onAddTaskFromColumn(column.id) : undefined}
               />
             </motion.div>

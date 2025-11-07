@@ -10,7 +10,8 @@ import { CreateTaskModal } from '@/components/features/tasks/create-task-modal';
 import { EditTaskModal } from '@/components/features/tasks/edit-task-modal';
 import { StageManager } from '@/components/features/tasks/stage-manager';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, ListTodo, Settings2 } from 'lucide-react';
+import { PlusCircle, ListTodo, Settings2, Archive } from 'lucide-react';
+import Link from 'next/link';
 
 // Sample task data - can be linked to Monday.com projects and Redmine threads
 const initialColumns: Column[] = [
@@ -464,6 +465,35 @@ function TasksPageContent() {
     setEditingTask(null);
   };
 
+  const handleTaskDelete = async (task: Task) => {
+    if (!confirm(`Are you sure you want to delete "${task.title}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/tasks?id=${task.id}`, {
+        method: 'DELETE',
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Remove the task from columns
+        setColumns((cols) =>
+          cols.map((col) => ({
+            ...col,
+            tasks: col.tasks.filter((t) => t.id !== task.id),
+          }))
+        );
+      } else {
+        alert('Failed to delete task');
+      }
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      alert('Failed to delete task');
+    }
+  };
+
   return (
     <>
       <div className="p-6">
@@ -488,6 +518,12 @@ function TasksPageContent() {
                 <span className="text-sm text-muted-foreground">
                   {columns.reduce((acc, col) => acc + col.tasks.length, 0)} total tasks
                 </span>
+                <Link href="/dashboard/tasks/archive">
+                  <Button variant="outline">
+                    <Archive className="h-4 w-4 mr-2" />
+                    View Archive
+                  </Button>
+                </Link>
                 <Button
                   variant="outline"
                   onClick={() => setStageManagerOpen(true)}
@@ -513,6 +549,7 @@ function TasksPageContent() {
               onColumnsChange={setColumns}
               onTaskLinkClick={handleTaskLinkClick}
               onTaskEditClick={handleTaskEditClick}
+              onTaskDeleteClick={handleTaskDelete}
               onAddTaskFromColumn={handleAddTaskFromColumn}
             />
           )}

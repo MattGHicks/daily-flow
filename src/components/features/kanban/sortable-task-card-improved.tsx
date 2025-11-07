@@ -7,8 +7,9 @@ interface SortableTaskCardProps {
   task: Task;
   onLinkClick?: () => void;
   onEditClick?: (task: Task) => void;
+  onDeleteClick?: (task: Task) => void;
 }
 
-export function SortableTaskCardImproved({ task, onLinkClick, onEditClick }: SortableTaskCardProps) {
-  return <TaskCardImproved task={task} onLinkClick={onLinkClick} onEditClick={onEditClick} />;
+export function SortableTaskCardImproved({ task, onLinkClick, onEditClick, onDeleteClick }: SortableTaskCardProps) {
+  return <TaskCardImproved task={task} onLinkClick={onLinkClick} onEditClick={onEditClick} onDeleteClick={onDeleteClick} />;
 }

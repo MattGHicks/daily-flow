@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Task } from '@/types/kanban';
-import { Calendar, Clock, Link2, MessageSquare, User, AlertCircle, Edit2, ExternalLink } from 'lucide-react';
+import { Calendar, Clock, Link2, MessageSquare, User, AlertCircle, Edit2, ExternalLink, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
@@ -15,10 +15,11 @@ interface TaskCardProps {
   task: Task;
   onLinkClick?: () => void;
   onEditClick?: (task: Task) => void;
+  onDeleteClick?: (task: Task) => void;
   isOverlay?: boolean;
 }
 
-export function TaskCardImproved({ task, onLinkClick, onEditClick, isOverlay = false }: TaskCardProps) {
+export function TaskCardImproved({ task, onLinkClick, onEditClick, onDeleteClick, isOverlay = false }: TaskCardProps) {
   const {
     attributes,
     listeners,
@@ -139,6 +140,17 @@ export function TaskCardImproved({ task, onLinkClick, onEditClick, isOverlay = f
                       }}
                     >
                       <Link2 className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 hover:bg-destructive/10 text-destructive"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteClick?.(task);
+                      }}
+                    >
+                      <Trash2 className="h-3 w-3" />
                     </Button>
                   </motion.div>
                 )}

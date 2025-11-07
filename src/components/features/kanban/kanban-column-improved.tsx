@@ -15,11 +15,12 @@ interface KanbanColumnProps {
   column: Column;
   onTaskLinkClick?: (taskId: string) => void;
   onTaskEditClick?: (task: Task) => void;
+  onTaskDeleteClick?: (task: Task) => void;
   onAddTask?: () => void;
   onEditColumn?: () => void;
 }
 
-export function KanbanColumnImproved({ column, onTaskLinkClick, onTaskEditClick, onAddTask, onEditColumn }: KanbanColumnProps) {
+export function KanbanColumnImproved({ column, onTaskLinkClick, onTaskEditClick, onTaskDeleteClick, onAddTask, onEditColumn }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: column.id,
   });
@@ -154,6 +155,7 @@ export function KanbanColumnImproved({ column, onTaskLinkClick, onTaskEditClick,
                       task={task}
                       onLinkClick={onTaskLinkClick ? () => onTaskLinkClick(task.id) : undefined}
                       onEditClick={onTaskEditClick}
+                      onDeleteClick={onTaskDeleteClick}
                     />
                   </motion.div>
                 ))}

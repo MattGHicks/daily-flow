@@ -15,6 +15,8 @@ export interface Task {
   linkedMessageThreadUrl?: string; // Redmine thread URL
   stageId?: string; // Link to custom TaskStage
   status?: string; // Stage key for backward compatibility
+  archived?: boolean; // Whether the task is archived
+  archivedAt?: string; // When the task was archived
 }
 
 export interface TaskStage {

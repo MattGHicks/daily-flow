@@ -7,11 +7,35 @@ const DEV_USER_ID = 'dev-user-001';
 /**
  * GET /api/tasks
  * Fetch all tasks for the current user
+ * Auto-archives tasks in "done" status that are older than 3 days
  */
 export async function GET() {
   try {
+    // Auto-archive tasks in "done" status that are older than 3 days
+    const threeDaysAgo = new Date();
+    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+
+    await prisma.task.updateMany({
+      where: {
+        userId: DEV_USER_ID,
+        status: 'done',
+        archived: false,
+        updatedAt: {
+          lt: threeDaysAgo,
+        },
+      },
+      data: {
+        archived: true,
+        archivedAt: new Date(),
+      },
+    });
+
+    // Fetch non-archived tasks
     const tasks = await prisma.task.findMany({
-      where: { userId: DEV_USER_ID },
+      where: {
+        userId: DEV_USER_ID,
+        archived: false,
+      },
       orderBy: [
         { status: 'asc' },
         { order: 'asc' },

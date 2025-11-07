@@ -69,6 +69,8 @@ model Task {
   linkedMessageThreadName String? // Redmine thread name
   linkedMessageThreadUrl String?  // Redmine thread URL
   stageId               String?   // Link to custom TaskStage
+  archived              Boolean   @default(false) // Whether the task is archived
+  archivedAt            DateTime? // When the task was archived
   // Relations
   user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   stage                 TaskStage? @relation(fields: [stageId], references: [id], onDelete: SetNull)
@@ -79,6 +81,7 @@ model Task {
   @@index([status])
   @@index([priority])
   @@index([stageId])
+  @@index([archived])
 }
 
 model Project {
