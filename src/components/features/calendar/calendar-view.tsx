@@ -10,6 +10,8 @@ import {
   CalendarDays,
   CalendarRange,
   CalendarClock,
+  Filter,
+  X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -21,6 +23,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { EventCard, CalendarEvent } from './event-card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -28,8 +38,17 @@ import { Badge } from '@/components/ui/badge';
 
 type ViewType = 'month' | 'week' | 'day';
 
+interface CalendarInfo {
+  id: string;
+  summary: string;
+  backgroundColor?: string;
+  foregroundColor?: string;
+  primary?: boolean;
+}
+
 interface CalendarViewProps {
   events: CalendarEvent[];
+  calendars?: CalendarInfo[];
   isLoading?: boolean;
   onRefresh?: () => void;
   onAuthenticate?: () => void;
@@ -38,6 +57,7 @@ interface CalendarViewProps {
 
 export function CalendarView({
   events,
+  calendars = [],
   isLoading = false,
   onRefresh,
   onAuthenticate,
@@ -46,6 +66,35 @@ export function CalendarView({
   const [viewType, setViewType] = useState<ViewType>('month');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [selectedCalendars, setSelectedCalendars] = useState<Set<string>>(new Set());
+
+  // Initialize selected calendars when calendars prop changes
+  useEffect(() => {
+    if (calendars.length > 0 && selectedCalendars.size === 0) {
+      setSelectedCalendars(new Set(calendars.map(cal => cal.id)));
+    }
+  }, [calendars]);
+
+  // Toggle calendar filter
+  const toggleCalendar = (calendarId: string) => {
+    const newSelected = new Set(selectedCalendars);
+    if (newSelected.has(calendarId)) {
+      newSelected.delete(calendarId);
+    } else {
+      newSelected.add(calendarId);
+    }
+    setSelectedCalendars(newSelected);
+  };
+
+  // Select all calendars
+  const selectAllCalendars = () => {
+    setSelectedCalendars(new Set(calendars.map(cal => cal.id)));
+  };
+
+  // Deselect all calendars
+  const deselectAllCalendars = () => {
+    setSelectedCalendars(new Set());
+  };
 
   // Get the start of the current view period
   const getViewStart = () => {
@@ -75,12 +124,14 @@ export function CalendarView({
     return date;
   };
 
-  // Filter events for the current view
+  // Filter events for the current view and selected calendars
   const filteredEvents = events.filter(event => {
     const eventStart = new Date(event.start);
     const viewStart = getViewStart();
     const viewEnd = getViewEnd();
-    return eventStart >= viewStart && eventStart < viewEnd;
+    const inDateRange = eventStart >= viewStart && eventStart < viewEnd;
+    const inSelectedCalendar = selectedCalendars.size === 0 || selectedCalendars.has(event.calendarId || '');
+    return inDateRange && inSelectedCalendar;
   });
 
   // Group events by date
@@ -157,54 +208,67 @@ export function CalendarView({
     const dayEvents = eventsByDate[dateKey] || [];
     const isToday = date.toDateString() === new Date().toDateString();
     const isCurrentMonth = date.getMonth() === currentDate.getMonth();
+    const isPast = date < new Date(new Date().setHours(0, 0, 0, 0));
 
     return (
       <motion.div
         key={dateKey}
         className={cn(
-          'min-h-[100px] p-2 border-r border-b',
+          'min-h-[100px] p-2 border-r border-b relative',
           !isCurrentMonth && 'bg-muted/30',
-          isToday && 'bg-primary/5'
+          isToday && 'bg-gradient-to-br from-primary/20 via-primary/10 to-primary/5 ring-2 ring-primary/50 ring-inset'
         )}
-        whileHover={{ backgroundColor: 'rgba(var(--primary), 0.05)' }}
+        whileHover={{ backgroundColor: isToday ? undefined : 'rgba(var(--primary), 0.05)' }}
       >
+        {isToday && (
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary/50 via-primary to-primary/50" />
+        )}
         <div className="flex items-center justify-between mb-1">
           <span
             className={cn(
               'text-sm font-medium',
               !isCurrentMonth && 'text-muted-foreground',
-              isToday && 'text-primary'
+              isToday && 'text-primary font-bold text-base flex items-center justify-center w-7 h-7 rounded-full bg-primary text-primary-foreground'
             )}
           >
             {date.getDate()}
           </span>
           {dayEvents.length > 0 && (
-            <Badge variant="secondary" className="text-xs px-1">
+            <Badge
+              variant={isToday ? "default" : "secondary"}
+              className={cn("text-xs px-1.5", isToday && "bg-primary/80")}
+            >
               {dayEvents.length}
             </Badge>
           )}
         </div>
         <div className="space-y-1">
-          {dayEvents.slice(0, 3).map((event, index) => (
-            <motion.div
-              key={event.id}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: index * 0.05 }}
-              className={cn(
-                'text-xs p-1 rounded truncate cursor-pointer',
-                'bg-primary/10 hover:bg-primary/20 transition-colors'
-              )}
-              onClick={() => setSelectedEvent(event)}
-            >
-              {event.allDay ? '◉' : new Date(event.start).toLocaleTimeString('en-US', {
-                hour: 'numeric',
-                minute: '2-digit',
-                hour12: true,
-              })}{' '}
-              {event.title}
-            </motion.div>
-          ))}
+          {dayEvents.slice(0, 3).map((event, index) => {
+            const eventEnd = new Date(event.end);
+            const isEventPast = eventEnd < new Date();
+
+            return (
+              <motion.div
+                key={event.id}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: index * 0.05 }}
+                className={cn(
+                  'text-xs p-1 rounded truncate cursor-pointer transition-all',
+                  'bg-primary/10 hover:bg-primary/20',
+                  isEventPast && 'opacity-50 grayscale line-through'
+                )}
+                onClick={() => setSelectedEvent(event)}
+              >
+                {event.allDay ? '◉' : new Date(event.start).toLocaleTimeString('en-US', {
+                  hour: 'numeric',
+                  minute: '2-digit',
+                  hour12: true,
+                })}{' '}
+                {event.title}
+              </motion.div>
+            );
+          })}
           {dayEvents.length > 3 && (
             <div className="text-xs text-muted-foreground">
               +{dayEvents.length - 3} more
@@ -258,7 +322,7 @@ export function CalendarView({
     const startDate = getViewStart();
 
     return (
-      <div className="bg-background rounded-lg overflow-hidden">
+      <div className="bg-background rounded-lg overflow-hidden border">
         {viewType === 'week' && (
           <div className="grid grid-cols-8 border-b sticky top-0 bg-background z-10">
             <div className="p-2 border-r" />
@@ -270,16 +334,22 @@ export function CalendarView({
                 <div
                   key={i}
                   className={cn(
-                    'p-2 text-center border-r',
-                    isToday && 'bg-primary/5'
+                    'p-3 text-center border-r relative',
+                    isToday && 'bg-gradient-to-b from-primary/15 to-primary/5'
                   )}
                 >
-                  <div className="text-sm font-medium">
+                  {isToday && (
+                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary/50 via-primary to-primary/50" />
+                  )}
+                  <div className={cn(
+                    'text-sm font-medium',
+                    isToday && 'text-primary'
+                  )}>
                     {date.toLocaleDateString('en-US', { weekday: 'short' })}
                   </div>
                   <div className={cn(
-                    'text-lg',
-                    isToday && 'text-primary font-bold'
+                    'text-lg mt-1',
+                    isToday && 'flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground font-bold mx-auto'
                   )}>
                     {date.getDate()}
                   </div>
@@ -292,7 +362,7 @@ export function CalendarView({
         <div className="overflow-y-auto max-h-[600px]">
           {hours.map(hour => (
             <div key={hour} className="grid grid-cols-8 border-b">
-              <div className="p-2 text-xs text-muted-foreground border-r">
+              <div className="p-2 text-xs text-muted-foreground border-r bg-muted/30">
                 {hour === 0
                   ? '12 AM'
                   : hour < 12
@@ -308,6 +378,8 @@ export function CalendarView({
                 const cellDateEnd = new Date(cellDate);
                 cellDateEnd.setHours(hour + 1);
 
+                const isToday = cellDate.toDateString() === new Date().toDateString();
+
                 const cellEvents = filteredEvents.filter(event => {
                   const eventStart = new Date(event.start);
                   return (
@@ -320,18 +392,29 @@ export function CalendarView({
                 return (
                   <div
                     key={dayIndex}
-                    className="min-h-[50px] p-1 border-r hover:bg-muted/30"
+                    className={cn(
+                      'min-h-[50px] p-1 border-r hover:bg-muted/30 transition-colors',
+                      isToday && 'bg-primary/5'
+                    )}
                   >
-                    {cellEvents.map(event => (
-                      <motion.div
-                        key={event.id}
-                        className="text-xs p-1 bg-primary/10 rounded mb-1 cursor-pointer hover:bg-primary/20"
-                        onClick={() => setSelectedEvent(event)}
-                        whileHover={{ scale: 1.05 }}
-                      >
-                        {event.title}
-                      </motion.div>
-                    ))}
+                    {cellEvents.map(event => {
+                      const eventEnd = new Date(event.end);
+                      const isEventPast = eventEnd < new Date();
+
+                      return (
+                        <motion.div
+                          key={event.id}
+                          className={cn(
+                            'text-xs p-1.5 bg-primary/10 rounded mb-1 cursor-pointer hover:bg-primary/20 transition-all',
+                            isEventPast && 'opacity-50 grayscale line-through'
+                          )}
+                          onClick={() => setSelectedEvent(event)}
+                          whileHover={{ scale: 1.03 }}
+                        >
+                          {event.title}
+                        </motion.div>
+                      );
+                    })}
                   </div>
                 );
               })}
@@ -361,45 +444,110 @@ export function CalendarView({
   return (
     <div className="space-y-4">
       {/* Header controls */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={navigatePrev}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={navigateNext}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            onClick={navigateToday}
-          >
-            Today
-          </Button>
-          <h2 className="text-xl font-semibold ml-4">{getHeaderText()}</h2>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={navigatePrev}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={navigateNext}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              onClick={navigateToday}
+            >
+              Today
+            </Button>
+          </div>
+          <h2 className="text-xl font-semibold">{getHeaderText()}</h2>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Calendar filter dropdown */}
+          {calendars.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Filter className="h-4 w-4" />
+                  Calendars
+                  {selectedCalendars.size > 0 && selectedCalendars.size < calendars.length && (
+                    <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-xs">
+                      {selectedCalendars.size}
+                    </Badge>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64">
+                <DropdownMenuLabel className="flex items-center justify-between">
+                  <span>Filter Calendars</span>
+                  <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-xs"
+                      onClick={selectAllCalendars}
+                    >
+                      All
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-xs"
+                      onClick={deselectAllCalendars}
+                    >
+                      None
+                    </Button>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <div className="max-h-[300px] overflow-y-auto">
+                  {calendars.map((calendar) => (
+                    <DropdownMenuCheckboxItem
+                      key={calendar.id}
+                      checked={selectedCalendars.has(calendar.id)}
+                      onCheckedChange={() => toggleCalendar(calendar.id)}
+                    >
+                      <div className="flex items-center gap-2 flex-1">
+                        <div
+                          className="w-3 h-3 rounded-sm flex-shrink-0"
+                          style={{ backgroundColor: calendar.backgroundColor || '#3b82f6' }}
+                        />
+                        <span className="truncate">{calendar.summary}</span>
+                        {calendar.primary && (
+                          <Badge variant="outline" className="ml-auto text-xs px-1">
+                            Primary
+                          </Badge>
+                        )}
+                      </div>
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+
           <Tabs value={viewType} onValueChange={(v) => setViewType(v as ViewType)}>
             <TabsList>
               <TabsTrigger value="month">
-                <CalendarDays className="h-4 w-4 mr-2" />
-                Month
+                <CalendarDays className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Month</span>
               </TabsTrigger>
               <TabsTrigger value="week">
-                <CalendarRange className="h-4 w-4 mr-2" />
-                Week
+                <CalendarRange className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Week</span>
               </TabsTrigger>
               <TabsTrigger value="day">
-                <CalendarClock className="h-4 w-4 mr-2" />
-                Day
+                <CalendarClock className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Day</span>
               </TabsTrigger>
             </TabsList>
           </Tabs>
@@ -443,13 +591,22 @@ export function CalendarView({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
             onClick={() => setSelectedEvent(null)}
           >
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-4 right-4 h-10 w-10 rounded-full bg-background/10 hover:bg-background/20 text-white"
+              onClick={() => setSelectedEvent(null)}
+            >
+              <X className="h-5 w-5" />
+            </Button>
             <motion.div
-              initial={{ scale: 0.9 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.9 }}
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
               onClick={(e) => e.stopPropagation()}
               className="max-w-lg w-full"
             >

@@ -350,19 +350,43 @@ export default function DashboardPage() {
             <CardContent>
               {dashboardData?.upcomingEvents?.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">
-                  No upcoming deadlines
+                  No upcoming events
                 </p>
               ) : (
                 <div className="space-y-2">
                   {dashboardData?.upcomingEvents?.slice(0, 4).map((event: any) => (
-                    <div key={event.id} className="p-2 rounded-lg bg-muted/50">
-                      <p className="text-sm font-medium truncate">{event.title}</p>
+                    <div key={event.id} className="p-2 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-sm font-medium truncate flex-1">{event.title}</p>
+                        {event.type === 'calendar-event' ? (
+                          <Calendar className="h-3 w-3 text-blue-500 flex-shrink-0" />
+                        ) : (
+                          <CheckCircle2 className="h-3 w-3 text-orange-500 flex-shrink-0" />
+                        )}
+                      </div>
                       <div className="flex items-center gap-2 mt-1">
                         <Clock className="h-3 w-3 text-muted-foreground" />
                         <span className="text-xs text-muted-foreground">
-                          {event.date ? new Date(event.date).toLocaleDateString() : 'No date'}
+                          {event.date
+                            ? event.allDay
+                              ? new Date(event.date).toLocaleDateString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                })
+                              : new Date(event.date).toLocaleString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: 'numeric',
+                                  minute: '2-digit',
+                                })
+                            : 'No date'}
                         </span>
                       </div>
+                      {event.calendarName && (
+                        <span className="text-xs text-muted-foreground/70 mt-1 block">
+                          {event.calendarName}
+                        </span>
+                      )}
                     </div>
                   ))}
                 </div>

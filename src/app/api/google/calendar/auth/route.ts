@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
 import { PrismaClient } from '@prisma/client';
-import { encrypt, decrypt } from '@/lib/crypto';
+import { decrypt } from '@/lib/encryption';
 
 const prisma = new PrismaClient();
 
@@ -99,9 +99,14 @@ export async function POST() {
     }
 
     // Try to refresh the access token to verify authentication
+    // Decrypt client secret if it exists
+    const clientSecret = settings.googleClientSecret
+      ? decrypt(settings.googleClientSecret)
+      : undefined;
+
     const oauth2Client = getOAuth2Client(
       settings.googleClientId || undefined,
-      settings.googleClientSecret || undefined
+      clientSecret
     );
 
     try {

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
-import { decrypt } from '@/lib/crypto';
+import { decrypt } from '@/lib/encryption';
 
 const prisma = new PrismaClient();
 

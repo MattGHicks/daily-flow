@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { OAuth2Client } from 'google-auth-library';
 import { PrismaClient } from '@prisma/client';
-import { encrypt, decrypt } from '@/lib/crypto';
+import { encrypt, decrypt } from '@/lib/encryption';
 
 const prisma = new PrismaClient();
 

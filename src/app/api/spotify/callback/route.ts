@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
-import { encrypt } from '@/lib/crypto';
-import { decryptFields } from '@/lib/encryption';
+import { encrypt, decryptFields } from '@/lib/encryption';
 
 const prisma = new PrismaClient();
 const USER_ID = 'dev-user-001'; // Use same user ID as settings page

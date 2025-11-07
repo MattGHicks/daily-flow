@@ -9,9 +9,18 @@ import { Calendar as CalendarIcon } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 
+interface CalendarInfo {
+  id: string;
+  summary: string;
+  backgroundColor?: string;
+  foregroundColor?: string;
+  primary?: boolean;
+}
+
 function CalendarPageContent() {
   const searchParams = useSearchParams();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [calendars, setCalendars] = useState<CalendarInfo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,6 +51,9 @@ function CalendarPageContent() {
 
       if (data.success && data.events) {
         setEvents(data.events);
+        if (data.calendars) {
+          setCalendars(data.calendars);
+        }
       } else if (data.authenticated === false) {
         setIsAuthenticated(false);
       } else {
@@ -139,6 +151,7 @@ function CalendarPageContent() {
         ) : (
           <CalendarView
             events={events}
+            calendars={calendars}
             isLoading={isLoading}
             isAuthenticated={isAuthenticated}
             onRefresh={handleRefresh}

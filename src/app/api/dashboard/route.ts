@@ -111,7 +111,43 @@ export async function GET() {
       }
     }
 
-    // 4. CALCULATE ANALYTICS
+    // 4. FETCH GOOGLE CALENDAR EVENTS
+    let upcomingCalendarEvents = [];
+    let calendarEventsCount = 0;
+
+    if (settings?.googleRefreshToken) {
+      try {
+        const calendarResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/google/calendar/events`);
+        const calendarData = await calendarResponse.json();
+
+        if (calendarData.success && calendarData.events) {
+          // Get upcoming events (not in the past)
+          const futureEvents = calendarData.events.filter((event: any) => {
+            const eventStart = new Date(event.start);
+            return eventStart > new Date();
+          });
+
+          calendarEventsCount = futureEvents.length;
+
+          // Get next 5 upcoming events
+          upcomingCalendarEvents = futureEvents
+            .slice(0, 5)
+            .map((event: any) => ({
+              id: event.id,
+              title: event.title,
+              date: event.start,
+              type: 'calendar-event',
+              calendarName: event.calendarName,
+              location: event.location,
+              allDay: event.allDay,
+            }));
+        }
+      } catch (error) {
+        console.error('Error fetching Google Calendar events:', error);
+      }
+    }
+
+    // 5. CALCULATE ANALYTICS
     const totalTasks = tasks.length;
     const completionRate = totalTasks > 0
       ? Math.round((tasksByStatus.done / totalTasks) * 100)
@@ -122,7 +158,7 @@ export async function GET() {
       (tasksCompletedThisWeek * 10) + (completionRate * 0.5)
     ));
 
-    // 5. PREPARE DASHBOARD DATA
+    // 6. PREPARE DASHBOARD DATA
     const dashboardData = {
       stats: [
         {
@@ -144,10 +180,10 @@ export async function GET() {
           icon: 'tasks',
         },
         {
-          title: 'Upcoming Deadlines',
-          value: upcomingTasks.length.toString(),
-          change: upcomingTasks.length > 0
-            ? `Next: ${new Date(upcomingTasks[0].deadline!).toLocaleDateString()}`
+          title: 'Upcoming Events',
+          value: calendarEventsCount.toString(),
+          change: calendarEventsCount > 0
+            ? `${calendarEventsCount} in next 90 days`
             : 'None scheduled',
           icon: 'calendar',
         },
@@ -164,12 +200,18 @@ export async function GET() {
           deadline: task.deadline,
         })),
 
-      upcomingEvents: upcomingTasks.map(task => ({
-        id: task.id,
-        title: task.title,
-        date: task.deadline,
-        type: 'task-deadline',
-      })),
+      upcomingEvents: [
+        // Combine calendar events and task deadlines
+        ...upcomingCalendarEvents,
+        ...upcomingTasks.map(task => ({
+          id: task.id,
+          title: task.title,
+          date: task.deadline,
+          type: 'task-deadline',
+        })),
+      ]
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+        .slice(0, 5),
 
       tasksByStatus,
 

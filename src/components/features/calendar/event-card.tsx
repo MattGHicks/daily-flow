@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Calendar, Clock, MapPin, Users, Video, ExternalLink } from 'lucide-react';
+import { Calendar, Clock, MapPin, Users, Video, ExternalLink, Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -37,6 +37,8 @@ export interface CalendarEvent {
   }>;
   conferenceData?: any;
   recurrence?: string[];
+  calendarId?: string;
+  calendarName?: string;
 }
 
 interface EventCardProps {
@@ -59,9 +61,35 @@ const eventColors: Record<string, string> = {
   '11': 'bg-rose-500/10 border-rose-500/50 text-rose-500',
 };
 
+// Helper function to convert URLs in text to clickable links
+const linkifyText = (text: string) => {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = text.split(urlRegex);
+
+  return parts.map((part, index) => {
+    if (part.match(urlRegex)) {
+      return (
+        <a
+          key={index}
+          href={part}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary hover:underline"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {part}
+        </a>
+      );
+    }
+    return part;
+  });
+};
+
 export function EventCard({ event, view = 'compact', onClick }: EventCardProps) {
   const startDate = new Date(event.start);
   const endDate = new Date(event.end);
+  const now = new Date();
+  const isPast = endDate < now;
 
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString('en-US', {
@@ -106,11 +134,15 @@ export function EventCard({ event, view = 'compact', onClick }: EventCardProps) 
         className="cursor-pointer"
         onClick={onClick}
       >
-        <Card className={cn('overflow-hidden border-l-4', colorClass)}>
+        <Card className={cn(
+          'overflow-hidden border-l-4',
+          colorClass,
+          isPast && 'opacity-50 grayscale'
+        )}>
           <CardHeader className="p-3">
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1 min-w-0">
-                <CardTitle className="text-sm font-medium truncate">
+                <CardTitle className={cn('text-sm font-medium truncate', isPast && 'line-through')}>
                   {event.title}
                 </CardTitle>
                 <CardDescription className="text-xs mt-1">
@@ -155,7 +187,16 @@ export function EventCard({ event, view = 'compact', onClick }: EventCardProps) 
         <CardHeader>
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <CardTitle className="text-lg">{event.title}</CardTitle>
+              <div className="flex items-center gap-2 mb-2">
+                <CardTitle className={cn('text-lg', isPast && 'line-through opacity-70')}>
+                  {event.title}
+                </CardTitle>
+                {isPast && (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                    Past
+                  </span>
+                )}
+              </div>
               <div className="flex flex-col gap-2 mt-2 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
@@ -170,17 +211,49 @@ export function EventCard({ event, view = 'compact', onClick }: EventCardProps) 
                   )}
                 </div>
 
-                {event.location && (
+                {event.calendarName && (
                   <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4" />
-                    <span>{event.location}</span>
+                    <CalendarIcon className="h-4 w-4" />
+                    <span className="text-xs">{event.calendarName}</span>
                   </div>
                 )}
 
-                {hasVideoConference && (
+                {event.location && (
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4" />
+                    {event.location.match(/^https?:\/\//) ? (
+                      <a
+                        href={event.location}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {event.location}
+                      </a>
+                    ) : (
+                      <span>{event.location}</span>
+                    )}
+                  </div>
+                )}
+
+                {hasVideoConference && event.conferenceData?.entryPoints && (
                   <div className="flex items-center gap-2">
                     <Video className="h-4 w-4" />
-                    <span>Video conference included</span>
+                    {event.conferenceData.entryPoints
+                      .filter((ep: any) => ep.entryPointType === 'video')
+                      .map((ep: any, idx: number) => (
+                        <a
+                          key={idx}
+                          href={ep.uri}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Join video call
+                        </a>
+                      ))[0] || <span>Video conference included</span>}
                   </div>
                 )}
               </div>
@@ -213,10 +286,12 @@ export function EventCard({ event, view = 'compact', onClick }: EventCardProps) 
         {(event.description || event.attendees) && (
           <CardContent className="pt-0">
             {event.description && (
-              <p className="text-sm text-muted-foreground mb-3">
-                {event.description.length > 200
-                  ? event.description.substring(0, 200) + '...'
-                  : event.description}
+              <p className="text-sm text-muted-foreground mb-3 whitespace-pre-wrap">
+                {linkifyText(
+                  event.description.length > 500
+                    ? event.description.substring(0, 500) + '...'
+                    : event.description
+                )}
               </p>
             )}
 
