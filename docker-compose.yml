@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:16-alpine
+    container_name: daily-flow-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: daily_flow
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+    volumes:
+      - daily-flow-db-data:/var/lib/postgresql/data
+      - ./backups:/backups  # For database backups/imports
+    ports:
+      - "5434:5432"  # Expose on 5434 to avoid conflicts
+    networks:
+      - daily-flow-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Daily Flow Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: daily-flow-app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://postgres:${DB_PASSWORD:-changeme}@db:5432/daily_flow
+      - NEXT_PUBLIC_APP_URL=${APP_URL:-http://localhost:3100}
+      - GOOGLE_REDIRECT_BASE_URL=${APP_URL:-http://localhost:3100}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+    ports:
+      - "3100:3000"
+    networks:
+      - daily-flow-network
+    labels:
+      - "homepage.group=My Apps"
+      - "homepage.name=Daily Flow"
+      - "homepage.icon=https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/png/calendar.png"
+      - "homepage.href=http://192.168.254.126:3100"
+      - "homepage.description=Personal task and project management"
+
+networks:
+  daily-flow-network:
+    driver: bridge
+
+volumes:
+  daily-flow-db-data:
+    driver: local

@@ -140,8 +140,8 @@ export async function GET(request: NextRequest) {
       id: p.id,
       name: p.name,
       status: p.status,
-      tasksCount: allTasks.filter(t => t.projectId === p.id).length,
-      completedTasks: allTasks.filter(t => t.projectId === p.id && (t.status === 'done' || t.status === 'completed')).length,
+      tasksCount: allTasks.filter(t => t.linkedProjectId === p.mondayId).length,
+      completedTasks: allTasks.filter(t => t.linkedProjectId === p.mondayId && (t.status === 'done' || t.status === 'completed')).length,
     }));
 
     // Productivity patterns (simulated)

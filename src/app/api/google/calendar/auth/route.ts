@@ -68,7 +68,7 @@ export async function GET() {
 
     // Log the generated URL for debugging
     console.log('Generated Google OAuth URL:', authUrl);
-    console.log('Redirect URI:', oauth2Client.redirectUri);
+    // console.log('Redirect URI:', oauth2Client.redirectUri); // Private property
     console.log('Client ID:', clientId?.substring(0, 20) + '...');
 
     return NextResponse.json({ success: true, authUrl });

@@ -71,6 +71,8 @@ export async function GET(request: NextRequest) {
     // Fetch events from all calendars
     const allEvents = [];
     for (const cal of calendars) {
+      if (!cal.id) continue; // Skip calendars without an ID
+
       try {
         const response = await calendar.events.list({
           calendarId: cal.id,

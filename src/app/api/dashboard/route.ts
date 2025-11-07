@@ -60,7 +60,7 @@ export async function GET() {
 
     if (settings?.mondayApiKey) {
       try {
-        const projectsResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/monday/projects`);
+        const projectsResponse = await fetch(`http://localhost:3000/api/monday/projects`);
         const projectsData = await projectsResponse.json();
 
         if (projectsData.success) {
@@ -90,7 +90,7 @@ export async function GET() {
 
     if (settings?.redmineApiKey) {
       try {
-        const messagesResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/redmine/issues`);
+        const messagesResponse = await fetch(`http://localhost:3000/api/redmine/issues`);
         const messagesData = await messagesResponse.json();
 
         if (messagesData.success) {
@@ -117,7 +117,7 @@ export async function GET() {
 
     if (settings?.googleRefreshToken) {
       try {
-        const calendarResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/google/calendar/events`);
+        const calendarResponse = await fetch(`http://localhost:3000/api/google/calendar/events`);
         const calendarData = await calendarResponse.json();
 
         if (calendarData.success && calendarData.events) {

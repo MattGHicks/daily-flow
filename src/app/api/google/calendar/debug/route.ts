@@ -35,7 +35,7 @@ export async function GET() {
       decryptionStatus = 'using_env_var';
     }
 
-    const diagnostics = {
+    const diagnostics: any = {
       hasClientId: !!clientId,
       hasClientSecret: !!clientSecret,
       clientIdLength: clientId?.length || 0,

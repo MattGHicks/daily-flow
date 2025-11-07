@@ -15,7 +15,10 @@ export function encrypt(text: string): string {
   if (!text) return '';
 
   const iv = crypto.randomBytes(IV_LENGTH);
-  const key = Buffer.from(ENCRYPTION_KEY.slice(0, 32), 'utf8');
+  // Parse hex key (64 hex chars = 32 bytes) or use first 32 chars as utf8 fallback
+  const key = ENCRYPTION_KEY.length === 64
+    ? Buffer.from(ENCRYPTION_KEY, 'hex')
+    : Buffer.from(ENCRYPTION_KEY.slice(0, 32), 'utf8');
 
   const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
   let encrypted = cipher.update(text, 'utf8', 'hex');
@@ -35,7 +38,10 @@ export function decrypt(text: string): string {
   try {
     const [ivHex, encryptedData] = text.split(':');
     const iv = Buffer.from(ivHex, 'hex');
-    const key = Buffer.from(ENCRYPTION_KEY.slice(0, 32), 'utf8');
+    // Parse hex key (64 hex chars = 32 bytes) or use first 32 chars as utf8 fallback
+    const key = ENCRYPTION_KEY.length === 64
+      ? Buffer.from(ENCRYPTION_KEY, 'hex')
+      : Buffer.from(ENCRYPTION_KEY.slice(0, 32), 'utf8');
 
     const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
     let decrypted = decipher.update(encryptedData, 'hex', 'utf8');
